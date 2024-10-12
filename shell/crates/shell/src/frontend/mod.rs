@@ -3,6 +3,7 @@ use std::io::Read;
 use crate::ir::Command;
 
 mod compiler;
+mod env;
 
 pub struct Frontend {
     c: compiler::Compiler,
