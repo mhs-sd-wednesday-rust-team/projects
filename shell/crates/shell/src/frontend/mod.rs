@@ -1,9 +1,8 @@
-use std::collections::HashMap;
 use std::fmt::{Debug, Display};
 use conch_parser::ast::{Command, ListableCommand, Parameter, PipeableCommand, RedirectOrCmdWord, RedirectOrEnvVar, ShellWord, SimpleWord, TopLevelWord, Word};
 use conch_parser::lexer::Lexer;
 use conch_parser::parse::DefaultParser;
-use crate::ir::{AssignCommandInner, PipeCommand, Command as IrCommand, CallCommand};
+use crate::ir::{PipeCommand};
 
 pub mod compiler;
 mod env;
@@ -33,7 +32,7 @@ pub enum Arg {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum ShellCommand {
+pub enum ShellCommandInterm {
     Execute {
         name: CompoundArg,
         args: Vec<CompoundArg>
@@ -42,11 +41,6 @@ pub enum ShellCommand {
         name: String,
         value: Option<CompoundArg>
     }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct PipedCommands {
-    commands: Vec<ShellCommand>
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -141,7 +135,7 @@ fn parse_top_level_word<T: Debug + Display>(word: TopLevelWord<T>) -> Result<Com
     Ok(CompoundArg::new(processed_args))
 }
 
-pub fn parse_intermediate(input: &str) -> Result<Vec<ShellCommand>, ParseError> {
+pub fn parse_intermediate(input: &str) -> Result<Vec<ShellCommandInterm>, ParseError> {
     let lex = Lexer::new(input.chars());
     let parser = DefaultParser::new(lex);
     let parse_res = parser
@@ -184,7 +178,7 @@ pub fn parse_intermediate(input: &str) -> Result<Vec<ShellCommand>, ParseError> 
                 None => None,
                 Some(value) => Some(value?)
             };
-            piped_commands.push(ShellCommand::Assign {
+            piped_commands.push(ShellCommandInterm::Assign {
                 name,
                 value
             });
@@ -205,7 +199,7 @@ pub fn parse_intermediate(input: &str) -> Result<Vec<ShellCommand>, ParseError> 
         let values_parsed = values_parsed?;
         let (name, args) = values_parsed
             .split_first().expect("expected command with args.");
-        piped_commands.push(ShellCommand::Execute {
+        piped_commands.push(ShellCommandInterm::Execute {
             name: name.clone(),
             args: args.clone().to_vec()
         })
@@ -226,48 +220,9 @@ impl Frontend {
         }
     }
 
-    pub fn parse(&self, input: &str) -> Result<PipeCommand, ParseError> {
+    pub fn parse(&mut self, input: &str) -> Result<PipeCommand, ParseError> {
         let interm = parse_intermediate(input)?;
-        let mut final_commands = Vec::new();
-        for command_interm in interm {
-            let arg_to_str = |arg: CompoundArg| {
-                let transformed_parts: Vec<String> = arg
-                    .inner
-                    .iter()
-                    .map(|p| {
-                        match p {
-                            Arg::String(str) => str.inner(),
-                            Arg::Var(name) => self.c.env.get(&name),
-                            Arg::Number(n) => n.to_string()
-                        }
-                    })
-                    .collect();
-                transformed_parts.join("")
-            };
-            match command_interm {
-                ShellCommand::Execute { name, args } => {
-                    let name = arg_to_str(name);
-                    let args: Vec<String> = args.into_iter().map(|a| arg_to_str(a)).collect();
-                    let mut argv = vec![name];
-                    argv.extend(args);
-                    final_commands.push(IrCommand::CallCommand(CallCommand {
-                        envs: HashMap::new(),
-                        argv
-                    }))
-                }
-                ShellCommand::Assign { name, value } => {
-                    let value = value.map_or(String::from(""), |a| {
-                        arg_to_str(a)
-                    });
-                    final_commands.push(IrCommand::AssignCommand(AssignCommandInner {
-                        name,
-                        value
-                    }))
-                }
-            }
-        }
-        Ok(PipeCommand {
-            commands: final_commands,
-        })
+        let pipe_command = self.c.compile(interm);
+        Ok(pipe_command)
     }
 }
