@@ -1,18 +1,20 @@
+use std::collections::HashMap;
 use crate::ir::Command;
 
 use super::env::Environment;
 
 pub struct Compiler {
-    env: Environment,
+    pub env: Environment,
 }
 
 impl Compiler {
     pub fn new() -> Self {
-        unimplemented!()
+        Self {
+            env: Environment(HashMap::new())
+        }
     }
 
     pub fn compile<I: Iterator<Item = ()>>(ast: I) -> () {
-        // -> impl Iterator<Item = Command> {
         unimplemented!()
     }
 }

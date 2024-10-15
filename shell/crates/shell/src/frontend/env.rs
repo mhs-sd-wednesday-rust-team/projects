@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
-pub struct Environment(HashMap<String, String>);
+pub struct Environment(pub HashMap<String, String>);
 
 impl Environment {
     pub fn get(&self, key: &str) -> String {
-        unimplemented!()
+        self.0.get(key).unwrap().clone()
     }
 
     pub fn set(&mut self, key: &str, value: String) {
-        unimplemented!()
+        self.0.insert(String::from(key), value);
     }
 }
