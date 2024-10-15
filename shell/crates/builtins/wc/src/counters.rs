@@ -72,7 +72,7 @@ impl Counter for WordCounter {
     }
 
     fn get(&self) -> usize {
-        self.word_count
+        self.word_count + if !self.is_whitespace { 1 } else { 0 }
     }
 
     fn reset(&mut self) {
@@ -141,105 +141,39 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_byte_counter() {
-        let mut counter = ByteCounter::default();
+    fn test_counters() {
+        let cases: Vec<(Box<dyn Counter>, &str, usize)> = vec![
+            (Box::new(ByteCounter::default()), "a💩", 5),
+            (Box::new(CharacterCounter::default()), "a💩", 2),
+            (Box::new(WordCounter::default()), " 💩 hello world", 3),
+            (Box::new(WordCounter::default()), " 💩 hello \n world ", 3),
+            (
+                Box::new(NewlineCounter::default()),
+                " 💩 hello \n world ",
+                1,
+            ),
+            (Box::new(NewlineCounter::default()), " 💩 hello world \n", 1),
+            (
+                Box::new(NewlineCounter::default()),
+                "\n💩 hell\no world \n",
+                3,
+            ),
+            (Box::new(NewlineCounter::default()), "💩", 0),
+            (
+                Box::new(MaxLineLengthCounter::default()),
+                " 💩 hello \n world ",
+                9,
+            ),
+            (Box::new(MaxLineLengthCounter::default()), "\n\n \n", 1),
+        ];
 
-        counter.count('a');
-        counter.count('💩');
-
-        assert_eq!(counter.get(), 5);
-
-        counter.reset();
-
-        assert_eq!(counter.get(), 0);
-    }
-
-    #[test]
-    fn test_char_counter() {
-        let mut counter = CharacterCounter::default();
-
-        counter.count('a');
-        counter.count('💩');
-
-        assert_eq!(counter.get(), 2);
-
-        counter.reset();
-
-        assert_eq!(counter.get(), 0);
-    }
-
-    #[test]
-    fn test_word_counter() {
-        let mut counter = WordCounter::default();
-
-        counter.count('a');
-        counter.count(' ');
-        counter.count('b');
-        counter.count('\t');
-        counter.count('c');
-        counter.count('\n');
-        counter.count('\r');
-        counter.count('d');
-        counter.count(' ');
-
-        assert_eq!(counter.get(), 4);
-
-        counter.reset();
-
-        assert_eq!(counter.get(), 0);
-    }
-
-    #[test]
-    fn test_newline_counter() {
-        let mut counter = NewlineCounter::default();
-
-        counter.count('a');
-        counter.count(' ');
-        counter.count('b');
-        counter.count('\t');
-        counter.count('c');
-        counter.count('\n');
-        counter.count('\r');
-        counter.count('d');
-        counter.count(' ');
-        counter.count('\n');
-
-        assert_eq!(counter.get(), 2);
-
-        counter.reset();
-
-        assert_eq!(counter.get(), 0);
-    }
-
-    #[test]
-    fn test_newline_counter_no_newline() {
-        let mut counter = NewlineCounter::default();
-
-        counter.count('a');
-        counter.count(' ');
-        counter.count('b');
-
-        assert_eq!(counter.get(), 0);
-    }
-
-    #[test]
-    fn test_maxline_counter() {
-        let mut counter = MaxLineLengthCounter::default();
-
-        counter.count('a');
-        counter.count(' ');
-        counter.count('b');
-        counter.count('\t');
-        counter.count('c');
-        counter.count('\n');
-        counter.count('d');
-        counter.count(' ');
-        counter.count('\n');
-
-        assert_eq!(counter.get(), 5);
-
-        counter.reset();
-
-        assert_eq!(counter.get(), 0);
+        for (mut counter, s, expected_count) in cases {
+            for ch in s.chars() {
+                counter.count(ch);
+            }
+            assert_eq!(counter.get(), expected_count);
+            counter.reset();
+            assert_eq!(counter.get(), 0);
+        }
     }
 }
