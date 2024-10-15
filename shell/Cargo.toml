@@ -1,5 +1,4 @@
 [workspace]
-
 members = [
     "crates/shell",
     "crates/builtins/*",
@@ -9,3 +8,6 @@ members = [
 version = "0.0.1"
 edition = "2021"
 license = "TODO"
+
+[workspace.dependencies]
+clap = { version = "4.5.20", features = ["derive"] }
