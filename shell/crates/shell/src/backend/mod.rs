@@ -8,6 +8,12 @@ use crate::ir::Command;
 pub struct Backend;
 
 impl Backend {
+    /// Executes given ir::Command
+    ///
+    /// # Errors
+    ///
+    /// This function will return an UnimplementedError for PipeCommand. 
+    /// Moreover, it will return any OS errors encountered during spawn of subprocess
     pub fn exec(
         &self,
         command: Command,
@@ -80,6 +86,30 @@ mod tests {
             String::from_utf8_lossy(&output.stdout),
             format!("{}\n", test_str)
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_call_command_passes_custom_environment() -> Result<(), Box<dyn Error>> {
+        let backend = Backend;
+        let test_key = "some_key";
+        let test_value = "some_value";
+        let command = Command::CallCommand(CallCommand {
+            envs: HashMap::from([(test_key.to_string(), test_value.to_string())]),
+            argv: vec!["env".to_string()],
+        });
+
+        let execution_result =
+            backend.exec_with_io(command, Stdio::piped(), Stdio::piped(), Stdio::piped())?;
+        let Some(output) = execution_result else {
+            panic!("Expected to spawn some and get its output");
+        };
+
+        assert_eq!(Some(0), output.status.code());
+
+        let stdout_content = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout_content.contains(&format!("{}={}\n", test_key, test_value)));
 
         Ok(())
     }
