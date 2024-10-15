@@ -1,15 +1,17 @@
 use std::collections::HashMap;
 
+#[derive(Debug)]
 pub enum Command {
-    PipeCommand(PipeCommand),
     CallCommand(CallCommand),
     ExitCommand,
 }
 
+#[derive(Debug)]
 pub struct PipeCommand {
-    pub commands: Vec<Box<Command>>,
+    pub commands: Vec<Command>,
 }
 
+#[derive(Debug)]
 pub struct CallCommand {
     pub envs: HashMap<String, String>,
     pub argv: Vec<String>,
