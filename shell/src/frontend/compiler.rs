@@ -1,6 +1,6 @@
 use super::env::Environment;
-use crate::frontend::{Arg, CompoundArg, ShellCommandInterm};
-use crate::ir::{CallCommand, Command, PipeCommand};
+use crate::frontend::{Arg, CompoundArg, ParseError, ShellCommandInterm};
+use crate::ir::{CallCommand, PipeCommand};
 use std::collections::HashMap;
 
 pub struct Compiler {
@@ -14,7 +14,7 @@ impl Compiler {
         }
     }
 
-    pub fn compile(&mut self, interm: Vec<ShellCommandInterm>) -> PipeCommand {
+    pub fn compile(&mut self, interm: Vec<ShellCommandInterm>) -> Result<PipeCommand, ParseError> {
         let mut commands = Vec::new();
         let env_copy = self.env.clone();
         for command_interm in interm {
@@ -36,10 +36,10 @@ impl Compiler {
                     let args: Vec<String> = args.into_iter().map(|a| arg_to_str(a)).collect();
                     let mut argv = vec![name];
                     argv.extend(args);
-                    commands.push(crate::ir::Command::CallCommand(CallCommand {
+                    commands.push(CallCommand {
                         envs: HashMap::new(),
                         argv,
-                    }))
+                    })
                 }
                 ShellCommandInterm::Assign { name, value } => {
                     let value = value.map_or(String::from(""), |a| arg_to_str(a));
@@ -48,6 +48,6 @@ impl Compiler {
             }
         }
 
-        PipeCommand { commands }
+        Ok(PipeCommand { commands })
     }
 }

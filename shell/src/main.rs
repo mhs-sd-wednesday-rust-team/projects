@@ -1,4 +1,5 @@
 use std::error::Error;
+use std::process::exit;
 
 mod backend;
 mod builtins;

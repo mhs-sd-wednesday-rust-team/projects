@@ -1,16 +1,39 @@
 use std::{
     error::Error,
-    process::{Command as ProcessCommand, ExitStatus, Output, Stdio},
+    process::{Command as ProcessCommand, Output, Stdio},
 };
 
 use crate::{
     builtins::{
         cat::CatCommand, echo::EchoCommand, pwd::PwdCommand, wc::WcCommand, BuiltinCommand,
     },
-    ir::{Command, PipeCommand},
+    ir::{PipeCommand},
 };
+use crate::builtins::exit::ExitCommand;
+use crate::ir::CallCommand;
 
 pub struct Backend;
+
+#[derive(Debug)]
+pub struct ExitStatus {
+    code: Option<i32>
+}
+
+impl ExitStatus {
+    pub fn new(code: Option<i32>) -> Self {
+        Self { code }
+    }
+
+    pub fn code(&self) -> Option<i32> {
+        self.code
+    }
+}
+
+impl Default for ExitStatus {
+    fn default() -> Self {
+        Self { code: None }
+    }
+}
 
 impl Backend {
     pub fn new() -> Self {
@@ -42,55 +65,42 @@ impl Backend {
     /// This function will return an UnimplementedError for two or more commands in
     /// PipeCommand. Moreover, it will return any OS errors encountered during spawn
     /// of subprocess
-    pub fn exec_command(&self, command: Command) -> Result<ExitStatus, Box<dyn Error>> {
-        match command {
-            Command::CallCommand(call_command) => {
-                let cmd = call_command.argv[0].clone();
-                match cmd.as_str() {
-                    "cat" => CatCommand::exec(call_command.argv).map(|_| ExitStatus::default()),
-                    "echo" => EchoCommand::exec(call_command.argv).map(|_| ExitStatus::default()),
-                    "pwd" => PwdCommand::exec(call_command.argv).map(|_| ExitStatus::default()),
-                    "wc" => WcCommand::exec(call_command.argv).map(|_| ExitStatus::default()),
-                    _ => self
-                        .exec_command_with_io(
-                            Command::CallCommand(call_command),
-                            Stdio::inherit(),
-                            Stdio::inherit(),
-                            Stdio::inherit(),
-                        )
-                        .map(|output| output.map(|o| o.status).unwrap_or_default()),
-                }
-            }
-            Command::ExitCommand => {
-                return Ok(ExitStatus::default());
-            }
+    pub fn exec_command(&self, call_command: CallCommand) -> Result<ExitStatus, Box<dyn Error>> {
+        let cmd = call_command.argv[0].clone();
+        match cmd.as_str() {
+            "cat" => CatCommand::exec(call_command.argv),
+            "echo" => EchoCommand::exec(call_command.argv),
+            "exit" => ExitCommand::exec(call_command.argv),
+            "pwd" => PwdCommand::exec(call_command.argv),
+            "wc" => WcCommand::exec(call_command.argv),
+            _ => self
+                .exec_command_with_io(
+                    call_command,
+                    Stdio::inherit(),
+                    Stdio::inherit(),
+                    Stdio::inherit(),
+                )
+                .map(|output| output.map(|o| ExitStatus::new(o.status.code())).unwrap_or_default()),
         }
     }
 
     fn exec_command_with_io(
         &self,
-        command: Command,
+        call_command: CallCommand,
         stdin: Stdio,
         stdout: Stdio,
         stderr: Stdio,
     ) -> Result<Option<Output>, Box<dyn Error>> {
-        match command {
-            Command::CallCommand(call_command) => {
-                let mut process_command = ProcessCommand::new(&call_command.argv[0]);
-                process_command
-                    .args(&call_command.argv[1..])
-                    .stdin(stdin)
-                    .stdout(stdout)
-                    .stderr(stderr)
-                    .envs(call_command.envs);
+        let mut process_command = ProcessCommand::new(&call_command.argv[0]);
+        process_command
+            .args(&call_command.argv[1..])
+            .stdin(stdin)
+            .stdout(stdout)
+            .stderr(stderr)
+            .envs(call_command.envs);
 
-                let output = process_command.spawn()?.wait_with_output()?;
-                return Ok(Some(output));
-            }
-            Command::ExitCommand => {
-                return Ok(None);
-            }
-        }
+        let output = process_command.spawn()?.wait_with_output()?;
+        return Ok(Some(output));
     }
 }
 
@@ -104,10 +114,10 @@ mod tests {
     fn test_call_command_stdout() -> Result<(), Box<dyn Error>> {
         let backend = Backend;
         let test_str = "Hello, world!";
-        let command = Command::CallCommand(CallCommand {
+        let command = CallCommand {
             envs: HashMap::new(),
             argv: vec!["echo".to_string(), test_str.to_string()],
-        });
+        };
 
         let execution_result = backend.exec_command_with_io(
             command,
@@ -133,10 +143,10 @@ mod tests {
         let backend = Backend;
         let test_key = "some_key";
         let test_value = "some_value";
-        let command = Command::CallCommand(CallCommand {
+        let command = CallCommand {
             envs: HashMap::from([(test_key.to_string(), test_value.to_string())]),
             argv: vec!["env".to_string()],
-        });
+        };
 
         let execution_result = backend.exec_command_with_io(
             command,
@@ -159,10 +169,10 @@ mod tests {
     #[test]
     fn test_failing_command_does_not_fail_shell() -> Result<(), Box<dyn Error>> {
         let backend = Backend;
-        let command = Command::CallCommand(CallCommand {
+        let command = CallCommand {
             envs: HashMap::new(),
             argv: vec!["sh".to_string(), "-c".to_string(), r#"exit 5"#.to_string()],
-        });
+        };
 
         let execution_result = backend.exec_command_with_io(
             command,
@@ -175,21 +185,6 @@ mod tests {
         };
 
         assert_eq!(Some(5), output.status.code());
-        Ok(())
-    }
-
-    #[test]
-    fn test_exit_just_returns() -> Result<(), Box<dyn Error>> {
-        let backend = Backend;
-        let command = Command::ExitCommand;
-
-        let execution_result = backend.exec_command_with_io(
-            command,
-            Stdio::piped(),
-            Stdio::piped(),
-            Stdio::piped(),
-        )?;
-        assert_eq!(None, execution_result);
         Ok(())
     }
 }
