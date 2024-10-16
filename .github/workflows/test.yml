@@ -1,0 +1,37 @@
+permissions:
+  contents: read
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, task/shell-implementation]
+  pull_request:
+    branches: [main, task/shell-implementation]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+name: test
+
+jobs:
+  required:
+    runs-on: ubuntu-latest
+    name: ubuntu / stable
+    defaults:
+      run:
+        working-directory: ./shell
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Install stable
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+      - name: cargo generate-lockfile
+        if: hashFiles('Cargo.lock') == ''
+        run: cargo generate-lockfile
+      - name: cargo test --locked
+        run: cargo test --locked --all-features --all-targets
+      - name: cargo test --doc
+        run: cargo test --locked --all-features --doc

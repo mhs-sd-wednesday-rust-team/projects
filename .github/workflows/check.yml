@@ -1,0 +1,52 @@
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, task/shell-implementation]
+  pull_request:
+    branches: [main, task/shell-implementation]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+name: check
+jobs:
+  fmt:
+    runs-on: ubuntu-latest
+    name: stable / fmt
+    defaults:
+      run:
+        working-directory: ./shell
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: cargo fmt --check
+        run: cargo fmt --check
+  clippy:
+    runs-on: ubuntu-latest
+    name: stable / clippy
+    permissions:
+      contents: read
+      checks: write
+    defaults:
+      run:
+        working-directory: ./shell
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Install stable
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          components: clippy
+      - name: cargo clippy
+        run: cargo clippy --all-targets --all-features
+        env:
+          RUSTFLAGS: "-Dwarnings"
