@@ -14,6 +14,7 @@ use crate::ir::CallCommand;
 
 pub struct Backend;
 
+#[derive(Debug)]
 pub struct ExitStatus {
     code: Option<i32>
 }
@@ -195,13 +196,10 @@ mod tests {
             argv: vec!["exit".to_string()],
         };
 
-        let execution_result = backend.exec_command_with_io(
+        let execution_result = backend.exec_command(
             command,
-            Stdio::piped(),
-            Stdio::piped(),
-            Stdio::piped(),
         )?;
-        assert_eq!(None, execution_result);
+        assert_eq!(None, execution_result.code());
         Ok(())
     }
 }
