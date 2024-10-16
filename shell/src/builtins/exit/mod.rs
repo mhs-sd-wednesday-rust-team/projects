@@ -10,6 +10,10 @@ struct Args {
     code: Option<i32>,
 }
 
+/// Implements the exit built-in command.
+///
+/// ExitCommand terminates the shell optional exit status code.
+/// If no code is provided, it defaults to exiting with status 0.
 pub struct ExitCommand;
 
 impl BuiltinCommand for ExitCommand {

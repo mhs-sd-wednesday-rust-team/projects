@@ -15,6 +15,7 @@ use crate::{
 pub struct Backend;
 
 #[derive(Debug, Default)]
+/// Represents the exit status of a command execution.
 pub struct ExitStatus {
     code: Option<i32>,
 }
@@ -29,6 +30,7 @@ impl ExitStatus {
     }
 }
 
+/// Represents the backend that handles the execution of shell commands.
 impl Backend {
     pub fn new() -> Self {
         Self
@@ -38,7 +40,7 @@ impl Backend {
     ///
     /// # Errors
     ///
-    /// This function will return an UnimplementedError for two or more commands in
+    /// This function will return an Err for two or more commands in
     /// PipeCommand. Moreover, it will return any OS errors encountered during spawn
     /// of subprocess
     pub fn exec(&self, mut pipe: PipeCommand) -> Result<ExitStatus, Box<dyn Error>> {

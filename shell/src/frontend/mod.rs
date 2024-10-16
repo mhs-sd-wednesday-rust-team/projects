@@ -131,6 +131,15 @@ fn parse_top_level_word<T: Debug + Display>(
     Ok(CompoundArg::new(processed_args))
 }
 
+/// Parses the intermediate representation of a shell command from the input string.
+///
+/// It currently supports only simple single-command inputs.
+///
+/// # Errors
+///
+/// This function will return errors for unsupported syntax such as asynchronous commands,
+/// logical operators, functions, and file descriptor redirection. It also returns errors
+/// when parsing fails.
 pub fn parse_intermediate(input: &str) -> Result<Vec<ShellCommandInterm>, ParseError> {
     let lex = Lexer::new(input.chars());
     let parser = DefaultParser::new(lex);
@@ -206,6 +215,8 @@ pub fn parse_intermediate(input: &str) -> Result<Vec<ShellCommandInterm>, ParseE
     Ok(piped_commands)
 }
 
+/// The frontend transforms commands from string representation
+/// to an executable form using compiler
 pub struct Frontend {
     c: compiler::Compiler,
 }
