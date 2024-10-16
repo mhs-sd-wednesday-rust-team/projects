@@ -68,7 +68,6 @@ impl From<&Args> for CounterScope {
     }
 }
 
-
 /// Implements the wc built-in command.
 ///
 /// WcCommand processes specified files and counts their contents.

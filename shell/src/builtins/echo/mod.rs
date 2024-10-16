@@ -12,7 +12,6 @@ struct Args {
     remove_trailing_newline: bool,
 }
 
-
 /// Implements the echo built-in command.
 ///
 /// EchoCommand prints the provided arguments to the standard output.
