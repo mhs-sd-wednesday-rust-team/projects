@@ -133,7 +133,10 @@ fn parse_top_level_word<T: Debug + Display>(
 pub fn parse_intermediate(input: &str) -> Result<Vec<ShellCommandInterm>, ParseError> {
     let lex = Lexer::new(input.chars());
     let parser = DefaultParser::new(lex);
-    let parse_res = parser.into_iter().next().expect("Expected parser result.");
+    let parse_res = parser.into_iter().next();
+    let Some(parse_res) = parse_res else {
+        return Err("Unable to parse (possibly emoty) input".into())
+    };
 
     let Ok(parse_res) = parse_res else {
         // Fatal error input
@@ -215,8 +218,7 @@ impl Frontend {
 
     pub fn parse(&mut self, input: &str) -> Result<PipeCommand, ParseError> {
         let interm = parse_intermediate(input)?;
-        let pipe_command = self.c.compile(interm);
-        Ok(pipe_command)
+        self.c.compile(interm)
     }
 }
 

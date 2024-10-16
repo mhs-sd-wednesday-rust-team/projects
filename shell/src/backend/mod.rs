@@ -1,6 +1,6 @@
 use std::{
     error::Error,
-    process::{Command as ProcessCommand, ExitStatus, Output, Stdio},
+    process::{Command as ProcessCommand, Output, Stdio},
 };
 
 use crate::{
@@ -9,8 +9,29 @@ use crate::{
     },
     ir::{Command, PipeCommand},
 };
+use crate::ir::CallCommand;
 
 pub struct Backend;
+
+pub struct ExitStatus {
+    code: Option<i32>
+}
+
+impl ExitStatus {
+    pub fn new(code: Option<i32>) -> Self {
+        Self { code }
+    }
+
+    pub fn code(&self) -> Option<i32> {
+        self.code
+    }
+}
+
+impl Default for ExitStatus {
+    fn default() -> Self {
+        Self { code: None }
+    }
+}
 
 impl Backend {
     pub fn new() -> Self {
@@ -53,44 +74,37 @@ impl Backend {
                     "wc" => WcCommand::exec(call_command.argv).map(|_| ExitStatus::default()),
                     _ => self
                         .exec_command_with_io(
-                            Command::CallCommand(call_command),
+                            call_command,
                             Stdio::inherit(),
                             Stdio::inherit(),
                             Stdio::inherit(),
                         )
-                        .map(|output| output.map(|o| o.status).unwrap_or_default()),
+                        .map(|output| output.map(|o| ExitStatus::new(o.status.code())).unwrap_or_default()),
                 }
             }
-            Command::ExitCommand => {
-                return Ok(ExitStatus::default());
+            Command::ExitCommand(status) => {
+                Ok(ExitStatus::new(status))
             }
         }
     }
 
     fn exec_command_with_io(
         &self,
-        command: Command,
+        call_command: CallCommand,
         stdin: Stdio,
         stdout: Stdio,
         stderr: Stdio,
     ) -> Result<Option<Output>, Box<dyn Error>> {
-        match command {
-            Command::CallCommand(call_command) => {
-                let mut process_command = ProcessCommand::new(&call_command.argv[0]);
-                process_command
-                    .args(&call_command.argv[1..])
-                    .stdin(stdin)
-                    .stdout(stdout)
-                    .stderr(stderr)
-                    .envs(call_command.envs);
+        let mut process_command = ProcessCommand::new(&call_command.argv[0]);
+        process_command
+            .args(&call_command.argv[1..])
+            .stdin(stdin)
+            .stdout(stdout)
+            .stderr(stderr)
+            .envs(call_command.envs);
 
-                let output = process_command.spawn()?.wait_with_output()?;
-                return Ok(Some(output));
-            }
-            Command::ExitCommand => {
-                return Ok(None);
-            }
-        }
+        let output = process_command.spawn()?.wait_with_output()?;
+        return Ok(Some(output));
     }
 }
 

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 #[derive(Debug)]
 pub enum Command {
     CallCommand(CallCommand),
-    ExitCommand,
+    ExitCommand(Option<i32>),
 }
 
 #[derive(Debug)]

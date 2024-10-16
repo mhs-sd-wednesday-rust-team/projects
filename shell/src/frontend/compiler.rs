@@ -1,5 +1,5 @@
 use super::env::Environment;
-use crate::frontend::{Arg, CompoundArg, ShellCommandInterm};
+use crate::frontend::{Arg, CompoundArg, ParseError, ShellCommandInterm};
 use crate::ir::{CallCommand, Command, PipeCommand};
 use std::collections::HashMap;
 
@@ -14,7 +14,7 @@ impl Compiler {
         }
     }
 
-    pub fn compile(&mut self, interm: Vec<ShellCommandInterm>) -> PipeCommand {
+    pub fn compile(&mut self, interm: Vec<ShellCommandInterm>) -> Result<PipeCommand, ParseError> {
         let mut commands = Vec::new();
         let env_copy = self.env.clone();
         for command_interm in interm {
@@ -34,12 +34,25 @@ impl Compiler {
                 ShellCommandInterm::Execute { name, args } => {
                     let name = arg_to_str(name);
                     let args: Vec<String> = args.into_iter().map(|a| arg_to_str(a)).collect();
-                    let mut argv = vec![name];
-                    argv.extend(args);
-                    commands.push(crate::ir::Command::CallCommand(CallCommand {
-                        envs: HashMap::new(),
-                        argv,
-                    }))
+                    if name == "exit" {
+                        if let Some(first_arg) = args.first() {
+                            let status = first_arg.parse::<i32>();
+                            if let Ok(status) = status {
+                                commands.push(Command::ExitCommand(Some(status)))
+                            } else {
+                                return Err("exit arg should be a valid i32.".into())
+                            }
+                        } else {
+                            commands.push(Command::ExitCommand(None))
+                        }
+                    } else {
+                        let mut argv = vec![name];
+                        argv.extend(args);
+                        commands.push(Command::CallCommand(CallCommand {
+                            envs: HashMap::new(),
+                            argv,
+                        }))
+                    }
                 }
                 ShellCommandInterm::Assign { name, value } => {
                     let value = value.map_or(String::from(""), |a| arg_to_str(a));
@@ -48,6 +61,6 @@ impl Compiler {
             }
         }
 
-        PipeCommand { commands }
+        Ok(PipeCommand { commands })
     }
 }

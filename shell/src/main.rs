@@ -1,4 +1,5 @@
 use std::error::Error;
+use std::process::exit;
 
 mod backend;
 mod builtins;
@@ -24,6 +25,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             Ok(exit_status) => match exit_status.code() {
                 Some(code) if code != 0 => {
                     eprintln!("exited with code {}", code);
+                    exit(code)
                 }
                 _ => {}
             },
