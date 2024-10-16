@@ -3,20 +3,20 @@ use std::{
     process::{Command as ProcessCommand, Output, Stdio},
 };
 
+use crate::builtins::exit::ExitCommand;
+use crate::ir::CallCommand;
 use crate::{
     builtins::{
         cat::CatCommand, echo::EchoCommand, pwd::PwdCommand, wc::WcCommand, BuiltinCommand,
     },
-    ir::{PipeCommand},
+    ir::PipeCommand,
 };
-use crate::builtins::exit::ExitCommand;
-use crate::ir::CallCommand;
 
 pub struct Backend;
 
 #[derive(Debug)]
 pub struct ExitStatus {
-    code: Option<i32>
+    code: Option<i32>,
 }
 
 impl ExitStatus {
@@ -80,7 +80,11 @@ impl Backend {
                     Stdio::inherit(),
                     Stdio::inherit(),
                 )
-                .map(|output| output.map(|o| ExitStatus::new(o.status.code())).unwrap_or_default()),
+                .map(|output| {
+                    output
+                        .map(|o| ExitStatus::new(o.status.code()))
+                        .unwrap_or_default()
+                }),
         }
     }
 

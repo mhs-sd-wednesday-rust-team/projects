@@ -1,6 +1,6 @@
+use crate::backend::ExitStatus;
 use clap::Parser;
 use std::{fs::File, io::Read};
-use crate::backend::ExitStatus;
 
 use super::BuiltinCommand;
 

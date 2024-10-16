@@ -1,6 +1,6 @@
-use std::process::exit;
-use clap::Parser;
 use crate::backend::ExitStatus;
+use clap::Parser;
+use std::process::exit;
 
 use super::BuiltinCommand;
 
