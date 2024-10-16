@@ -2,6 +2,8 @@
 
 This project is a Rust-based implementation of a shell, designed to provide a simple, fast, and reliable command-line interface.
 
+[**Documentation**](https://mhs-sd-wednesday-rust-team.github.io/projects/shell/)
+
 ## Features
 
 - Lightweight and fast execution
