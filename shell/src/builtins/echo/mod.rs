@@ -1,5 +1,5 @@
-use clap::Parser;
 use crate::backend::ExitStatus;
+use clap::Parser;
 
 use super::BuiltinCommand;
 

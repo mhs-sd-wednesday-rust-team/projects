@@ -143,28 +143,20 @@ mod tests {
     #[test]
     fn test_counters() {
         let cases: Vec<(Box<dyn Counter>, &str, usize)> = vec![
-            (Box::new(ByteCounter::default()), "a💩", 5),
-            (Box::new(CharacterCounter::default()), "a💩", 2),
-            (Box::new(WordCounter::default()), " 💩 hello world", 3),
-            (Box::new(WordCounter::default()), " 💩 hello \n world ", 3),
+            (Box::<ByteCounter>::default(), "a💩", 5),
+            (Box::<CharacterCounter>::default(), "a💩", 2),
+            (Box::<WordCounter>::default(), " 💩 hello world", 3),
+            (Box::<WordCounter>::default(), " 💩 hello \n world ", 3),
+            (Box::<NewlineCounter>::default(), " 💩 hello \n world ", 1),
+            (Box::<NewlineCounter>::default(), " 💩 hello world \n", 1),
+            (Box::<NewlineCounter>::default(), "\n💩 hell\no world \n", 3),
+            (Box::<NewlineCounter>::default(), "💩", 0),
             (
-                Box::new(NewlineCounter::default()),
-                " 💩 hello \n world ",
-                1,
-            ),
-            (Box::new(NewlineCounter::default()), " 💩 hello world \n", 1),
-            (
-                Box::new(NewlineCounter::default()),
-                "\n💩 hell\no world \n",
-                3,
-            ),
-            (Box::new(NewlineCounter::default()), "💩", 0),
-            (
-                Box::new(MaxLineLengthCounter::default()),
+                Box::<MaxLineLengthCounter>::default(),
                 " 💩 hello \n world ",
                 9,
             ),
-            (Box::new(MaxLineLengthCounter::default()), "\n\n \n", 1),
+            (Box::<MaxLineLengthCounter>::default(), "\n\n \n", 1),
         ];
 
         for (mut counter, s, expected_count) in cases {

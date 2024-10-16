@@ -1,5 +1,5 @@
-use std::env::current_dir;
 use crate::backend::ExitStatus;
+use std::env::current_dir;
 
 use super::BuiltinCommand;
 

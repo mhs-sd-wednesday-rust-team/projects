@@ -24,7 +24,7 @@ impl Compiler {
                     .iter()
                     .map(|p| match p {
                         Arg::String(str) => str.inner(),
-                        Arg::Var(name) => env_copy.get(&name),
+                        Arg::Var(name) => env_copy.get(name),
                         Arg::Number(n) => n.to_string(),
                     })
                     .collect();
@@ -33,7 +33,7 @@ impl Compiler {
             match command_interm {
                 ShellCommandInterm::Execute { name, args } => {
                     let name = arg_to_str(name);
-                    let args: Vec<String> = args.into_iter().map(|a| arg_to_str(a)).collect();
+                    let args: Vec<String> = args.into_iter().map(arg_to_str).collect();
                     let mut argv = vec![name];
                     argv.extend(args);
                     commands.push(CallCommand {
@@ -42,7 +42,7 @@ impl Compiler {
                     })
                 }
                 ShellCommandInterm::Assign { name, value } => {
-                    let value = value.map_or(String::from(""), |a| arg_to_str(a));
+                    let value = value.map_or(String::from(""), arg_to_str);
                     self.env.set(&name, value);
                 }
             }
