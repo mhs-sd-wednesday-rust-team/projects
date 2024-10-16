@@ -33,8 +33,7 @@ $CARGO_HOME/bin/shell
 
 ### Usage
 
-Once the shell is running, you can execute standard Unix commands. For a list of available commands and options, type help within the shell.
-
+Once the shell is running, you can execute standard Unix commands.
 
 ## Contributing
 
