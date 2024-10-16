@@ -1,6 +1,6 @@
 use super::env::Environment;
 use crate::frontend::{Arg, CompoundArg, ParseError, ShellCommandInterm};
-use crate::ir::{CallCommand, Command, PipeCommand};
+use crate::ir::{CallCommand, PipeCommand};
 use std::collections::HashMap;
 
 pub struct Compiler {
@@ -34,25 +34,12 @@ impl Compiler {
                 ShellCommandInterm::Execute { name, args } => {
                     let name = arg_to_str(name);
                     let args: Vec<String> = args.into_iter().map(|a| arg_to_str(a)).collect();
-                    if name == "exit" {
-                        if let Some(first_arg) = args.first() {
-                            let status = first_arg.parse::<i32>();
-                            if let Ok(status) = status {
-                                commands.push(Command::ExitCommand(Some(status)))
-                            } else {
-                                return Err("exit arg should be a valid i32.".into())
-                            }
-                        } else {
-                            commands.push(Command::ExitCommand(None))
-                        }
-                    } else {
-                        let mut argv = vec![name];
-                        argv.extend(args);
-                        commands.push(Command::CallCommand(CallCommand {
-                            envs: HashMap::new(),
-                            argv,
-                        }))
-                    }
+                    let mut argv = vec![name];
+                    argv.extend(args);
+                    commands.push(CallCommand {
+                        envs: HashMap::new(),
+                        argv,
+                    })
                 }
                 ShellCommandInterm::Assign { name, value } => {
                     let value = value.map_or(String::from(""), |a| arg_to_str(a));

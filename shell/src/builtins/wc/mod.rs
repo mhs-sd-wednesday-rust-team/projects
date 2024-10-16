@@ -5,6 +5,7 @@ use counter_scope::CounterScope;
 use counters::{ByteCounter, CharacterCounter, MaxLineLengthCounter, NewlineCounter, WordCounter};
 use stat_table::StatTable;
 use utf8_chars::BufReadCharsExt;
+use crate::backend::ExitStatus;
 
 use super::BuiltinCommand;
 
@@ -70,7 +71,7 @@ impl From<&Args> for CounterScope {
 pub struct WcCommand;
 
 impl BuiltinCommand for WcCommand {
-    fn exec(args: Vec<String>) -> Result<(), Box<dyn Error>> {
+    fn exec(args: Vec<String>) -> Result<ExitStatus, Box<dyn Error>> {
         let args = Args::try_parse_from(args.into_iter())?;
         let mut scope = CounterScope::from(&args);
         let mut stat_table = StatTable::default();
@@ -92,6 +93,6 @@ impl BuiltinCommand for WcCommand {
 
         println!("{}", stat_table);
 
-        Ok(())
+        Ok(ExitStatus::default())
     }
 }
