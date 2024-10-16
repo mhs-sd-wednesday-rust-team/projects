@@ -198,7 +198,7 @@ pub fn parse_intermediate(input: &str) -> Result<Vec<ShellCommandInterm>, ParseE
             .expect("expected command with args.");
         piped_commands.push(ShellCommandInterm::Execute {
             name: name.clone(),
-            args: args.clone().to_vec(),
+            args: args.to_vec(),
         })
     }
 
