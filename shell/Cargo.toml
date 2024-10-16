@@ -1,0 +1,10 @@
+[package]
+name = "shell"
+version = "0.0.1"
+edition = "2021"
+license = "TODO"
+
+[dependencies]
+clap = { version = "4.5.20", features = ["derive"] }
+conch-parser = "0.1.1"
+utf8-chars = "3.0.4"
