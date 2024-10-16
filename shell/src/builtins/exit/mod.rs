@@ -1,3 +1,4 @@
+use std::process::exit;
 use clap::Parser;
 use crate::backend::ExitStatus;
 
@@ -14,6 +15,6 @@ pub struct ExitCommand;
 impl BuiltinCommand for ExitCommand {
     fn exec(args: Vec<String>) -> Result<ExitStatus, Box<dyn std::error::Error>> {
         let args = Args::try_parse_from(args.into_iter())?;
-        Ok(ExitStatus::new(args.code))
+        exit(args.code.unwrap_or_default())
     }
 }
