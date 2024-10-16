@@ -26,7 +26,7 @@ impl Display for StatTable {
             }
             write!(f, "{}", path)?;
             if i != self.table.len() - 1 {
-                write!(f, "\n")?;
+                writeln!(f)?;
             }
         }
         Ok(())
@@ -39,7 +39,7 @@ mod tests {
 
     #[test]
     fn test_format() {
-        static CHECK: &'static str = r#"   1   11  111 path_1
+        static CHECK: &str = r#"   1   11  111 path_1
 2222    2   22 p_2"#;
 
         let mut table = StatTable::default();

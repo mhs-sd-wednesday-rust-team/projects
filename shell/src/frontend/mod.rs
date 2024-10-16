@@ -9,6 +9,7 @@ mod env;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum StringArg {
+    #[allow(dead_code)]
     DoubleQuoted(String),
     SingleQuoted(String),
     Simple(String),
@@ -107,7 +108,7 @@ fn parse_top_level_word<T: Debug + Display>(
             };
             Ok(Arg::Var(format!("{var}")))
         }
-        _ => return Err(ParseError::from(format!("Unsupported token: {sw:?}."))),
+        _ => Err(ParseError::from(format!("Unsupported token: {sw:?}."))),
     };
 
     let mut processed_args = Vec::new();
@@ -116,7 +117,7 @@ fn parse_top_level_word<T: Debug + Display>(
             ast::Word::Simple(simple) => parse_simple_word(simple)?,
             ast::Word::DoubleQuoted(dq) => {
                 let parsed: Result<Vec<Arg>, ParseError> =
-                    dq.into_iter().map(|sq| parse_simple_word(sq)).collect();
+                    dq.into_iter().map(parse_simple_word).collect();
                 if let Some(first) = parsed?.first() {
                     first.clone()
                 } else {
@@ -170,7 +171,7 @@ pub fn parse_intermediate(input: &str) -> Result<Vec<ShellCommandInterm>, ParseE
             let ast::RedirectOrEnvVar::EnvVar(name, value) = assign else {
                 return Err("Expected variable declaration. Redirection is not supported.".into());
             };
-            let value = value.map(|v| parse_top_level_word(v));
+            let value = value.map(parse_top_level_word);
             let value = match value {
                 None => None,
                 Some(value) => Some(value?),

@@ -14,7 +14,7 @@ use crate::{
 
 pub struct Backend;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ExitStatus {
     code: Option<i32>,
 }
@@ -26,12 +26,6 @@ impl ExitStatus {
 
     pub fn code(&self) -> Option<i32> {
         self.code
-    }
-}
-
-impl Default for ExitStatus {
-    fn default() -> Self {
-        Self { code: None }
     }
 }
 
@@ -48,7 +42,7 @@ impl Backend {
     /// PipeCommand. Moreover, it will return any OS errors encountered during spawn
     /// of subprocess
     pub fn exec(&self, mut pipe: PipeCommand) -> Result<ExitStatus, Box<dyn Error>> {
-        if pipe.commands.len() == 0 {
+        if pipe.commands.is_empty() {
             Ok(ExitStatus::default())
         } else if pipe.commands.len() == 1 {
             let command = pipe.commands.pop().unwrap();
@@ -104,7 +98,7 @@ impl Backend {
             .envs(call_command.envs);
 
         let output = process_command.spawn()?.wait_with_output()?;
-        return Ok(Some(output));
+        Ok(Some(output))
     }
 }
 

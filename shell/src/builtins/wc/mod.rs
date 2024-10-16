@@ -77,7 +77,7 @@ impl BuiltinCommand for WcCommand {
         let mut stat_table = StatTable::default();
 
         for path in args.file.as_slice() {
-            let file = File::open(&path)?;
+            let file = File::open(path)?;
             let mut buf = BufReader::new(file);
 
             for ch in buf.chars().map(|c| c.unwrap()) {

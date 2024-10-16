@@ -63,7 +63,7 @@ impl Counter for TotalCounter {
 impl TotalCounter {
     pub fn new_with_counter<C: Counter + Default + 'static>() -> Self {
         Self {
-            counter: Box::new(C::default()),
+            counter: Box::<C>::default(),
             total: 0,
         }
     }
