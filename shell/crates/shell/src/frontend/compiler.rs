@@ -1,7 +1,7 @@
-use std::collections::HashMap;
-use crate::frontend::{Arg, CompoundArg, ShellCommandInterm};
-use crate::ir::{CallCommand, PipeCommand};
 use super::env::Environment;
+use crate::frontend::{Arg, CompoundArg, ShellCommandInterm};
+use crate::ir::{CallCommand, Command, PipeCommand};
+use std::collections::HashMap;
 
 pub struct Compiler {
     pub env: Environment,
@@ -10,7 +10,7 @@ pub struct Compiler {
 impl Compiler {
     pub fn new() -> Self {
         Self {
-            env: Environment::new()
+            env: Environment::new(),
         }
     }
 
@@ -22,12 +22,10 @@ impl Compiler {
                 let transformed_parts: Vec<String> = arg
                     .inner
                     .iter()
-                    .map(|p| {
-                        match p {
-                            Arg::String(str) => str.inner(),
-                            Arg::Var(name) => env_copy.get(&name),
-                            Arg::Number(n) => n.to_string()
-                        }
+                    .map(|p| match p {
+                        Arg::String(str) => str.inner(),
+                        Arg::Var(name) => env_copy.get(&name),
+                        Arg::Number(n) => n.to_string(),
                     })
                     .collect();
                 transformed_parts.join("")
@@ -40,19 +38,16 @@ impl Compiler {
                     argv.extend(args);
                     commands.push(crate::ir::Command::CallCommand(CallCommand {
                         envs: HashMap::new(),
-                        argv
+                        argv,
                     }))
                 }
                 ShellCommandInterm::Assign { name, value } => {
-                    let value = value.map_or(String::from(""), |a| {
-                        arg_to_str(a)
-                    });
+                    let value = value.map_or(String::from(""), |a| arg_to_str(a));
                     self.env.set(&name, value);
                 }
             }
-        };
-        PipeCommand {
-            commands
         }
+
+        PipeCommand { commands }
     }
 }

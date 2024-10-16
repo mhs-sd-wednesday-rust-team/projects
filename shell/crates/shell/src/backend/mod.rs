@@ -1,35 +1,39 @@
 use std::{
     error::Error,
-    process::{Command as ProcessCommand, Output, Stdio},
+    process::{Command as ProcessCommand, ExitStatus, Output, Stdio},
 };
 
-use crate::ir::Command;
+use crate::ir::{Command, PipeCommand};
 
 pub struct Backend;
 
 impl Backend {
-    /// Executes given ir::Command
+    pub fn new() -> Self {
+        Self
+    }
+
+    /// Executes given ir::PipeCommand
     ///
     /// # Errors
     ///
-    /// This function will return an UnimplementedError for PipeCommand. 
-    /// Moreover, it will return any OS errors encountered during spawn of subprocess
-    pub fn exec(
-        &self,
-        command: Command,
-        // r: R, w: W,
-    ) -> Result<(), Box<dyn Error>>
-// where
-    //     R: Read,
-    //     W: Write,
-    {
-        self.exec_with_io(
-            command,
-            Stdio::inherit(),
-            Stdio::inherit(),
-            Stdio::inherit(),
-        )
-        .map(|_| ())
+    /// This function will return an UnimplementedError for two or more commands in
+    /// PipeCommand. Moreover, it will return any OS errors encountered during spawn
+    /// of subprocess
+    pub fn exec(&self, mut pipe: PipeCommand) -> Result<ExitStatus, Box<dyn Error>> {
+        if pipe.commands.len() == 0 {
+            Ok(ExitStatus::default())
+        } else if pipe.commands.len() == 1 {
+            let command = pipe.commands.pop().unwrap();
+            self.exec_with_io(
+                command,
+                Stdio::inherit(),
+                Stdio::inherit(),
+                Stdio::inherit(),
+            )
+            .map(|output| output.map(|o| o.status).unwrap_or_default())
+        } else {
+            Err("pipes are not yet implemented".into())
+        }
     }
 
     fn exec_with_io(
@@ -40,7 +44,6 @@ impl Backend {
         stderr: Stdio,
     ) -> Result<Option<Output>, Box<dyn Error>> {
         match command {
-            Command::PipeCommand(_pipe_command) => unimplemented!(),
             Command::CallCommand(call_command) => {
                 let mut process_command = ProcessCommand::new(&call_command.argv[0]);
                 process_command

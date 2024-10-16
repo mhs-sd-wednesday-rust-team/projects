@@ -1,21 +1,37 @@
-use backend::Backend;
-use ir::{CallCommand, Command, PipeCommand};
+use std::error::Error;
 
 mod backend;
 mod frontend;
 mod ir;
 
-fn main() {
-    // //  Simple example of running
-    // use std::collections::HashMap;
+fn main() -> Result<(), Box<dyn Error>> {
+    let mut frontend = frontend::Frontend::new();
+    let backend = backend::Backend::new();
 
-    // let call_command = Command::CallCommand(CallCommand {
-    //     envs: HashMap::new(),
-    //     argv: vec!["tee".to_string()],
-    // });
+    for line in std::io::stdin().lines() {
+        let line = line?;
 
+        let command = match frontend.parse(&line) {
+            Ok(command) => command,
+            Err(err) => {
+                eprintln!("{}", err);
+                continue;
+            }
+        };
 
-    // let executor = Backend;
-    // executor.exec(call_command).expect("Expeceted ok");
-    
+        match backend.exec(command) {
+            Ok(exit_status) => match exit_status.code() {
+                Some(code) if code != 0 => {
+                    eprintln!("exited with code {}", code);
+                }
+                _ => {}
+            },
+            Err(err) => {
+                eprintln!("{}", err);
+                continue;
+            }
+        };
+    }
+
+    Ok(())
 }
