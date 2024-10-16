@@ -10,6 +10,9 @@ struct Args {
     file: String,
 }
 
+/// Implements the cat built-in command.
+///
+/// CatCommand reads and prints the contents of a specified file to standard output.
 pub struct CatCommand;
 
 impl BuiltinCommand for CatCommand {

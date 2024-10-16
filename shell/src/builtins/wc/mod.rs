@@ -68,6 +68,11 @@ impl From<&Args> for CounterScope {
     }
 }
 
+/// Implements the wc built-in command.
+///
+/// WcCommand processes specified files and counts their contents.
+/// For each file, it gathers statistics such as lines, words, and characters,
+/// and outputs a summary, including a total if multiple files are specified.
 pub struct WcCommand;
 
 impl BuiltinCommand for WcCommand {

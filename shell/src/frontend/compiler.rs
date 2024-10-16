@@ -3,6 +3,8 @@ use crate::frontend::{Arg, CompoundArg, ParseError, ShellCommandInterm};
 use crate::ir::{CallCommand, PipeCommand};
 use std::collections::HashMap;
 
+/// Compiler transforms inner shell command representation
+/// into executable commands with given environment
 pub struct Compiler {
     pub env: Environment,
 }

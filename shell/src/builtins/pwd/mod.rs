@@ -3,6 +3,9 @@ use std::env::current_dir;
 
 use super::BuiltinCommand;
 
+/// Implements the pwd built-in command.
+///
+/// PwdCommand retrieves and prints the current working directory to the standard output.
 pub struct PwdCommand;
 
 impl BuiltinCommand for PwdCommand {
