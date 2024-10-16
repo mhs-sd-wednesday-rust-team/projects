@@ -1,13 +1,10 @@
-[workspace]
-members = [
-    "crates/shell",
-    "crates/builtins/*",
-]
-
-[workspace.package]
+[package]
+name = "shell"
 version = "0.0.1"
 edition = "2021"
 license = "TODO"
 
-[workspace.dependencies]
+[dependencies]
 clap = { version = "4.5.20", features = ["derive"] }
+conch-parser = "0.1.1"
+utf8-chars = "3.0.4"

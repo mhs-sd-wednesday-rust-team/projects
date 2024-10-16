@@ -1,4 +1,4 @@
-use crate::counters::Counter;
+use super::counters::Counter;
 
 #[derive(Default)]
 pub struct CounterScope {
@@ -75,7 +75,7 @@ impl TotalCounter {
 
 #[cfg(test)]
 mod tests {
-    use crate::counters::{ByteCounter, CharacterCounter};
+    use crate::builtins::wc::{ByteCounter, CharacterCounter};
 
     use super::*;
 

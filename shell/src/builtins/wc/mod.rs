@@ -1,10 +1,12 @@
-use std::{fs::File, io::BufReader};
+use std::{error::Error, fs::File, io::BufReader};
 
 use clap::Parser;
 use counter_scope::CounterScope;
 use counters::{ByteCounter, CharacterCounter, MaxLineLengthCounter, NewlineCounter, WordCounter};
 use stat_table::StatTable;
 use utf8_chars::BufReadCharsExt;
+
+use super::BuiltinCommand;
 
 mod counter_scope;
 mod counters;
@@ -65,25 +67,31 @@ impl From<&Args> for CounterScope {
     }
 }
 
-fn main() {
-    let args = Args::parse();
-    let mut scope = CounterScope::from(&args);
-    let mut stat_table = StatTable::default();
+pub struct WcCommand;
 
-    for path in args.file.as_slice() {
-        let file = File::open(&path).expect("Cannot read file.");
-        let mut buf = BufReader::new(file);
+impl BuiltinCommand for WcCommand {
+    fn exec(args: Vec<String>) -> Result<(), Box<dyn Error>> {
+        let args = Args::try_parse_from(args.into_iter())?;
+        let mut scope = CounterScope::from(&args);
+        let mut stat_table = StatTable::default();
 
-        for ch in buf.chars().map(|c| c.unwrap()) {
-            scope.count(ch);
+        for path in args.file.as_slice() {
+            let file = File::open(&path)?;
+            let mut buf = BufReader::new(file);
+
+            for ch in buf.chars().map(|c| c.unwrap()) {
+                scope.count(ch);
+            }
+
+            stat_table.add_row(path.clone(), scope.reset());
         }
 
-        stat_table.add_row(path.clone(), scope.reset());
-    }
+        if args.file.len() > 1 {
+            stat_table.add_row("total".to_string(), scope.total());
+        }
 
-    if args.file.len() > 1 {
-        stat_table.add_row("total".to_string(), scope.total());
-    }
+        println!("{}", stat_table);
 
-    println!("{}", stat_table);
+        Ok(())
+    }
 }
