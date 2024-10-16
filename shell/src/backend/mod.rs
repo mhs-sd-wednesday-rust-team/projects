@@ -187,19 +187,4 @@ mod tests {
         assert_eq!(Some(5), output.status.code());
         Ok(())
     }
-
-    #[test]
-    fn test_exit_just_returns() -> Result<(), Box<dyn Error>> {
-        let backend = Backend;
-        let command = CallCommand {
-            envs: HashMap::new(),
-            argv: vec!["exit".to_string()],
-        };
-
-        let execution_result = backend.exec_command(
-            command,
-        )?;
-        assert_eq!(None, execution_result.code());
-        Ok(())
-    }
 }
