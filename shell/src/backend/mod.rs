@@ -3,7 +3,12 @@ use std::{
     process::{Command as ProcessCommand, ExitStatus, Output, Stdio},
 };
 
-use crate::ir::{Command, PipeCommand};
+use crate::{
+    builtins::{
+        cat::CatCommand, echo::EchoCommand, pwd::PwdCommand, wc::WcCommand, BuiltinCommand,
+    },
+    ir::{Command, PipeCommand},
+};
 
 pub struct Backend;
 
@@ -24,19 +29,45 @@ impl Backend {
             Ok(ExitStatus::default())
         } else if pipe.commands.len() == 1 {
             let command = pipe.commands.pop().unwrap();
-            self.exec_with_io(
-                command,
-                Stdio::inherit(),
-                Stdio::inherit(),
-                Stdio::inherit(),
-            )
-            .map(|output| output.map(|o| o.status).unwrap_or_default())
+            self.exec_command(command)
         } else {
             Err("pipes are not yet implemented".into())
         }
     }
 
-    fn exec_with_io(
+    /// Executes given ir::Command
+    ///
+    /// # Errors
+    ///
+    /// This function will return an UnimplementedError for two or more commands in
+    /// PipeCommand. Moreover, it will return any OS errors encountered during spawn
+    /// of subprocess
+    pub fn exec_command(&self, command: Command) -> Result<ExitStatus, Box<dyn Error>> {
+        match command {
+            Command::CallCommand(call_command) => {
+                let cmd = call_command.argv[0].clone();
+                match cmd.as_str() {
+                    "cat" => CatCommand::exec(call_command.argv).map(|_| ExitStatus::default()),
+                    "echo" => EchoCommand::exec(call_command.argv).map(|_| ExitStatus::default()),
+                    "pwd" => PwdCommand::exec(call_command.argv).map(|_| ExitStatus::default()),
+                    "wc" => WcCommand::exec(call_command.argv).map(|_| ExitStatus::default()),
+                    _ => self
+                        .exec_command_with_io(
+                            Command::CallCommand(call_command),
+                            Stdio::inherit(),
+                            Stdio::inherit(),
+                            Stdio::inherit(),
+                        )
+                        .map(|output| output.map(|o| o.status).unwrap_or_default()),
+                }
+            }
+            Command::ExitCommand => {
+                return Ok(ExitStatus::default());
+            }
+        }
+    }
+
+    fn exec_command_with_io(
         &self,
         command: Command,
         stdin: Stdio,
@@ -78,8 +109,12 @@ mod tests {
             argv: vec!["echo".to_string(), test_str.to_string()],
         });
 
-        let execution_result =
-            backend.exec_with_io(command, Stdio::piped(), Stdio::piped(), Stdio::piped())?;
+        let execution_result = backend.exec_command_with_io(
+            command,
+            Stdio::piped(),
+            Stdio::piped(),
+            Stdio::piped(),
+        )?;
         let Some(output) = execution_result else {
             panic!("Expected to spawn some and get its output");
         };
@@ -103,8 +138,12 @@ mod tests {
             argv: vec!["env".to_string()],
         });
 
-        let execution_result =
-            backend.exec_with_io(command, Stdio::piped(), Stdio::piped(), Stdio::piped())?;
+        let execution_result = backend.exec_command_with_io(
+            command,
+            Stdio::piped(),
+            Stdio::piped(),
+            Stdio::piped(),
+        )?;
         let Some(output) = execution_result else {
             panic!("Expected to spawn some and get its output");
         };
@@ -125,8 +164,12 @@ mod tests {
             argv: vec!["sh".to_string(), "-c".to_string(), r#"exit 5"#.to_string()],
         });
 
-        let execution_result =
-            backend.exec_with_io(command, Stdio::piped(), Stdio::piped(), Stdio::piped())?;
+        let execution_result = backend.exec_command_with_io(
+            command,
+            Stdio::piped(),
+            Stdio::piped(),
+            Stdio::piped(),
+        )?;
         let Some(output) = execution_result else {
             panic!("Expected to spawn some and get its output");
         };
@@ -140,8 +183,12 @@ mod tests {
         let backend = Backend;
         let command = Command::ExitCommand;
 
-        let execution_result =
-            backend.exec_with_io(command, Stdio::piped(), Stdio::piped(), Stdio::piped())?;
+        let execution_result = backend.exec_command_with_io(
+            command,
+            Stdio::piped(),
+            Stdio::piped(),
+            Stdio::piped(),
+        )?;
         assert_eq!(None, execution_result);
         Ok(())
     }

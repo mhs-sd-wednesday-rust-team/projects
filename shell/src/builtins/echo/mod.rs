@@ -1,5 +1,7 @@
 use clap::Parser;
 
+use super::BuiltinCommand;
+
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
@@ -9,9 +11,14 @@ struct Args {
     remove_trailing_newline: bool,
 }
 
-fn main() {
-    let args = Args::parse();
-    let mut output = args.content.join(" ");
-    (!args.remove_trailing_newline).then(|| output += "\n");
-    print!("{output}")
+pub struct EchoCommand;
+
+impl BuiltinCommand for EchoCommand {
+    fn exec(args: Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
+        let args = Args::try_parse_from(args.into_iter())?;
+        let mut output = args.content.join(" ");
+        (!args.remove_trailing_newline).then(|| output += "\n");
+        print!("{output}");
+        Ok(())
+    }
 }

@@ -1,6 +1,7 @@
 use std::error::Error;
 
 mod backend;
+mod builtins;
 mod frontend;
 mod ir;
 

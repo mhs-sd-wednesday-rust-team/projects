@@ -1,7 +1,13 @@
 use std::env::current_dir;
 
-fn main() -> std::io::Result<()> {
-    let path = current_dir()?;
-    println!("{}", path.display());
-    Ok(())
+use super::BuiltinCommand;
+
+pub struct PwdCommand;
+
+impl BuiltinCommand for PwdCommand {
+    fn exec(_: Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
+        let path = current_dir()?;
+        println!("{}", path.display());
+        Ok(())
+    }
 }
