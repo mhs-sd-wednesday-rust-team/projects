@@ -1,4 +1,6 @@
-use std::error::Error;
+use std::{error::Error, io};
+
+use os_pipe::{dup_stderr, dup_stdin, dup_stdout};
 
 mod backend;
 mod builtins;
@@ -20,9 +22,9 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
         };
 
-        match backend.exec(command) {
-            Ok(exit_status) => match exit_status.code() {
-                Some(code) if code != 0 => {
+        match backend.exec(command, dup_stdin()?, dup_stderr()?, dup_stdout()?) {
+            Ok(exit_status) => match exit_status {
+                Err(code) => {
                     eprintln!("exited with code {}", code);
                 }
                 _ => {}
