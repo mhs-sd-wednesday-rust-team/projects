@@ -26,7 +26,7 @@ pub struct CallCommand {
 #[derive(Debug)]
 pub enum Command {
     Call,
-    Builtin(Box<dyn BuiltinCommand>),
+    Builtin(Box<dyn BuiltinCommand + Send>),
 }
 
 impl Command {

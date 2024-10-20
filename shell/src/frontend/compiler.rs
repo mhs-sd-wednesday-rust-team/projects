@@ -36,7 +36,7 @@ impl Compiler {
                 ShellCommandInterm::Execute { name, args } => {
                     let name = arg_to_str(name);
                     let args: Vec<String> = args.into_iter().map(arg_to_str).collect();
-                    let mut argv = vec![name];
+                    let mut argv = vec![name.clone()];
                     argv.extend(args);
                     commands.push(CallCommand {
                         envs: HashMap::new(),
