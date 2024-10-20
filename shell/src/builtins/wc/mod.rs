@@ -1,13 +1,11 @@
 use std::{error::Error, fs::File, io::BufReader};
 
-use crate::backend::ExitStatus;
+use crate::{backend::ExitStatus, ir::BuiltinCommand};
 use clap::Parser;
 use counter_scope::CounterScope;
 use counters::{ByteCounter, CharacterCounter, MaxLineLengthCounter, NewlineCounter, WordCounter};
 use stat_table::StatTable;
 use utf8_chars::BufReadCharsExt;
-
-use super::BuiltinCommand;
 
 mod counter_scope;
 mod counters;
@@ -73,16 +71,28 @@ impl From<&Args> for CounterScope {
 /// WcCommand processes specified files and counts their contents.
 /// For each file, it gathers statistics such as lines, words, and characters,
 /// and outputs a summary, including a total if multiple files are specified.
+#[derive(Default, Debug)]
 pub struct WcCommand;
 
 impl BuiltinCommand for WcCommand {
-    fn exec(args: Vec<String>) -> Result<ExitStatus, Box<dyn Error>> {
-        let args = Args::try_parse_from(args.into_iter())?;
+    fn exec(
+        &self,
+        args: Vec<String>,
+        _stdin: &mut dyn std::io::Read,
+        stderr: &mut dyn std::io::Write,
+        stdout: &mut dyn std::io::Write,
+    ) -> ExitStatus {
+        let mut capture_stderr = |err: &dyn Error| {
+            write!(stderr, "{}", err);
+            1
+        };
+
+        let args = Args::try_parse_from(args.into_iter()).map_err(|err| capture_stderr(&err))?;
         let mut scope = CounterScope::from(&args);
         let mut stat_table = StatTable::default();
 
         for path in args.file.as_slice() {
-            let file = File::open(path)?;
+            let file = File::open(path).map_err(|err| capture_stderr(&err))?;
             let mut buf = BufReader::new(file);
 
             for ch in buf.chars().map(|c| c.unwrap()) {
@@ -96,8 +106,8 @@ impl BuiltinCommand for WcCommand {
             stat_table.add_row("total".to_string(), scope.total());
         }
 
-        println!("{}", stat_table);
+        write!(stdout, "{}", stat_table);
 
-        Ok(ExitStatus::default())
+        ExitStatus::Ok(())
     }
 }
