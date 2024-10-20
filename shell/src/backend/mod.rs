@@ -50,7 +50,11 @@ impl Backend {
             let command = pipe.commands.pop().unwrap();
             self.exec_command(command)
         } else {
-            Err("pipes are not yet implemented".into())
+            self.exec_pipe_command_with_io(pipe, Stdio::inherit(), Stdio::inherit())
+                .map(|out| {
+                    out.map(|o| ExitStatus::new(o.status.code()))
+                        .unwrap_or_default()
+                })
         }
     }
 
@@ -101,6 +105,73 @@ impl Backend {
 
         let output = process_command.spawn()?.wait_with_output()?;
         Ok(Some(output))
+    }
+
+    /// Executes a sequence of shell commands connected by pipes with specified input/output streams.
+    ///
+    /// This method sets up and runs a sequence of commands (provided as `PipeCommand`) that form
+    /// a pipeline where the output of each command is connected to the input of the next.
+    ///
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(Some(Output))` containing the output of the last command, if the execution is successful.
+    /// Returns `Err` if an error occurs during the setup or execution of the pipeline, such as if
+    /// the command fails to start.
+    ///
+    /// The function will also return an error if the `PipeCommand` contains fewer than two commands
+    /// since a meaningful pipeline requires at least two commands for data flow.
+    ///
+    /// # Error Handling
+    ///
+    /// This function captures standard error of the processes by inheriting stderr from the parent.
+    /// Errors such as failure in spawning a command or incorrect setup will return a boxed
+    /// error encompassing the issue.
+    ///
+    /// # Panics
+    ///
+    /// This function may panic if called with invalid `Stdio` objects (e.g., if trying to use the same
+    /// `Stdio` handle multiple times or after it has been transformed into a file descriptor).
+    fn exec_pipe_command_with_io(
+        &self,
+        pipe_command: PipeCommand,
+        stdin: Stdio,
+        stdout: Stdio,
+    ) -> Result<Option<Output>, Box<dyn Error>> {
+        let commands = pipe_command.commands;
+        if commands.len() < 2 {
+            return Err("Pipe must contain at least two commands".into());
+        }
+
+        // FIXME: нужно научиться запускать наши built-in как процессы, тогда тут можно будет порефачить и заюзать общий метод для запуска CallCommand
+        let first_comamnd = ProcessCommand::new(&commands[0].argv[0])
+            .args(&commands[0].argv[1..])
+            .stdin(stdin)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::inherit())
+            .envs(commands[0].envs.clone())
+            .spawn()?;
+        let mut prev_command = first_comamnd;
+        for next_cmd in commands[1..commands.len() - 1].iter() {
+            prev_command = ProcessCommand::new(&next_cmd.argv[0])
+                .args(&next_cmd.argv[1..])
+                .stdin(Stdio::from(prev_command.stdout.unwrap()))
+                .stdout(Stdio::piped())
+                .stderr(Stdio::inherit())
+                .envs(next_cmd.envs.clone())
+                .spawn()?;
+        }
+
+        let last_cmd = commands.last().unwrap();
+        let final_command = ProcessCommand::new(&last_cmd.argv[0])
+            .args(&last_cmd.argv[1..])
+            .stdin(Stdio::from(prev_command.stdout.unwrap()))
+            .stdout(stdout)
+            .stderr(Stdio::inherit())
+            .envs(last_cmd.envs.clone())
+            .spawn()?;
+
+        Ok(Some(final_command.wait_with_output()?))
     }
 }
 
@@ -171,7 +242,7 @@ mod tests {
         let backend = Backend;
         let command = CallCommand {
             envs: HashMap::new(),
-            argv: vec!["sh".to_string(), "-c".to_string(), r#"exit 5"#.to_string()],
+            argv: vec!["sh".to_string(), "-c".to_string(), "exit 5".to_string()],
         };
 
         let execution_result = backend.exec_command_with_io(
@@ -185,6 +256,94 @@ mod tests {
         };
 
         assert_eq!(Some(5), output.status.code());
+        Ok(())
+    }
+
+    #[test]
+    fn test_empty_pipes_do_not_execute() -> Result<(), Box<dyn Error>> {
+        let backend = Backend::new();
+        let pipe_command = PipeCommand { commands: vec![] };
+        let result = backend.exec_pipe_command_with_io(pipe_command, Stdio::null(), Stdio::null());
+        assert!(result.is_err(), "Expected an error for empty pipe");
+        Ok(())
+    }
+
+    #[test]
+    fn test_two_command_pipe() -> Result<(), Box<dyn Error>> {
+        let backend = Backend::new();
+        let pipe_command = PipeCommand {
+            commands: vec![
+                CallCommand {
+                    argv: vec!["echo".into(), "Hello".into()],
+                    envs: HashMap::new(),
+                },
+                CallCommand {
+                    argv: vec!["grep".into(), "Hello".into()],
+                    envs: HashMap::new(),
+                },
+            ],
+        };
+
+        let output =
+            backend.exec_pipe_command_with_io(pipe_command, Stdio::null(), Stdio::piped())?;
+        assert!(output.is_some());
+        let output = output.unwrap();
+        assert!(output.status.success());
+        assert!(String::from_utf8_lossy(&output.stdout).contains("Hello"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_multiple_command_pipe() -> Result<(), Box<dyn Error>> {
+        let backend = Backend::new();
+        let pipe_command = PipeCommand {
+            commands: vec![
+                CallCommand {
+                    argv: vec!["echo".into(), "Hello World".into()],
+                    envs: HashMap::new(),
+                },
+                CallCommand {
+                    argv: vec!["tr".into(), "-d".into(), "o".into()],
+                    envs: HashMap::new(),
+                },
+                CallCommand {
+                    argv: vec!["tr".into(), "-d".into(), "e".into()],
+                    envs: HashMap::new(),
+                },
+            ],
+        };
+
+        let output =
+            backend.exec_pipe_command_with_io(pipe_command, Stdio::null(), Stdio::piped())?;
+        assert!(output.is_some());
+        let output = output.unwrap();
+        assert!(output.status.success());
+        assert!(String::from_utf8_lossy(&output.stdout).contains("Hll Wrld"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_pipe_do_not_stop_on_exit_code() -> Result<(), Box<dyn Error>> {
+        let backend = Backend::new();
+        let pipe_command = PipeCommand {
+            commands: vec![
+                CallCommand {
+                    argv: vec!["false".into()],
+                    envs: HashMap::new(),
+                },
+                CallCommand {
+                    argv: vec!["echo".into(), "Continued".into()],
+                    envs: HashMap::new(),
+                },
+            ],
+        };
+
+        let output =
+            backend.exec_pipe_command_with_io(pipe_command, Stdio::null(), Stdio::piped())?;
+
+        assert!(output.is_some());
+        let output = output.unwrap();
+        assert!(String::from_utf8_lossy(&output.stdout).contains("Continued"));
         Ok(())
     }
 }
