@@ -6,29 +6,14 @@ use std::{
 use crate::builtins::exit::ExitCommand;
 use crate::ir::CallCommand;
 use crate::{
-    builtins::{
-        cat::CatCommand, echo::EchoCommand, pwd::PwdCommand, wc::WcCommand, BuiltinCommand,
-    },
+    builtins::{cat::CatCommand, echo::EchoCommand, pwd::PwdCommand, wc::WcCommand},
     ir::PipeCommand,
 };
 
 pub struct Backend;
 
-#[derive(Debug, Default)]
 /// Represents the exit status of a command execution.
-pub struct ExitStatus {
-    code: Option<i32>,
-}
-
-impl ExitStatus {
-    pub fn new(code: Option<i32>) -> Self {
-        Self { code }
-    }
-
-    pub fn code(&self) -> Option<i32> {
-        self.code
-    }
-}
+pub type ExitStatus = Result<(), i32>;
 
 /// Represents the backend that handles the execution of shell commands.
 impl Backend {
@@ -45,7 +30,7 @@ impl Backend {
     /// of subprocess
     pub fn exec(&self, mut pipe: PipeCommand) -> Result<ExitStatus, Box<dyn Error>> {
         if pipe.commands.is_empty() {
-            Ok(ExitStatus::default())
+            Ok(ExitStatus::Ok(()))
         } else if pipe.commands.len() == 1 {
             let command = pipe.commands.pop().unwrap();
             self.exec_command(command)
@@ -67,13 +52,9 @@ impl Backend {
     /// of subprocess
     pub fn exec_command(&self, call_command: CallCommand) -> Result<ExitStatus, Box<dyn Error>> {
         let cmd = call_command.argv[0].clone();
-        match cmd.as_str() {
-            "cat" => CatCommand::exec(call_command.argv),
-            "echo" => EchoCommand::exec(call_command.argv),
-            "exit" => ExitCommand::exec(call_command.argv),
-            "pwd" => PwdCommand::exec(call_command.argv),
-            "wc" => WcCommand::exec(call_command.argv),
-            _ => self
+
+        match call_command.command {
+            crate::ir::Command::Call => self
                 .exec_command_with_io(
                     call_command,
                     Stdio::inherit(),
@@ -85,6 +66,9 @@ impl Backend {
                         .map(|o| ExitStatus::new(o.status.code()))
                         .unwrap_or_default()
                 }),
+            crate::ir::Command::Builtin(builtin_command) => {
+                builtin_command.exec(call_command.argv, stdin, stderr, stdout)
+            }
         }
     }
 

@@ -1,6 +1,6 @@
 use super::env::Environment;
 use crate::frontend::{Arg, CompoundArg, ParseError, ShellCommandInterm};
-use crate::ir::{CallCommand, PipeCommand};
+use crate::ir::{CallCommand, Command, PipeCommand};
 use std::collections::HashMap;
 
 /// Compiler transforms inner shell command representation
@@ -40,6 +40,7 @@ impl Compiler {
                     argv.extend(args);
                     commands.push(CallCommand {
                         envs: HashMap::new(),
+                        command: Command::from_name(&name),
                         argv,
                     })
                 }
