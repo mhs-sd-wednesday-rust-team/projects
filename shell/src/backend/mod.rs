@@ -1,7 +1,8 @@
 use std::{
+    collections::VecDeque,
     error::Error,
     fs::File,
-    io::{Read, Write},
+    io::{self, Read, Write},
     process::{Command as ProcessCommand, Stdio},
     thread::{self, JoinHandle},
 };
@@ -27,35 +28,51 @@ impl Backend {
     /// This function will return an Err for two or more commands in
     /// PipeCommand. Moreover, it will return any OS errors encountered during spawn
     /// of subprocess
-    pub fn exec<Stdin, Stderr, Stdout>(
+    pub fn exec<Stdin, Stdout>(
         &self,
         mut pipe: PipeCommand,
         stdin: Stdin,
-        stderr: Stderr,
         stdout: Stdout,
     ) -> Result<ExitStatus, Box<dyn Error + Sync + Send>>
     where
         Stdin: Into<Stdio> + Read + Send + 'static,
-        Stderr: Into<Stdio> + Write + Send + 'static,
         Stdout: Into<Stdio> + Write + Send + 'static,
     {
         if pipe.commands.is_empty() {
             return Ok(ExitStatus::Ok(()));
         } else if pipe.commands.len() == 1 {
             let command = pipe.commands.pop().unwrap();
-            let join_res = self.spawn_command(command, stdin, stderr, stdout).join();
-            match join_res {
+            let join_res = self.spawn_command(command, stdin, stdout).join();
+            return match join_res {
                 Ok(res) => res,
                 Err(err) => Err(format!("{:?}", err).into()),
-            }
-        } else {
-            unimplemented!()
-            //self.exec_pipe_command_with_io(pipe, Stdio::inherit(), Stdio::inherit())
-            //    .map(|out| {
-            //        out.map(|o| ExitStatus::new(o.status.code()))
-            //            .unwrap_or_default()
-            //    })
+            };
         }
+
+        let mut commands = VecDeque::new();
+        let mut pipe_commands = pipe.commands.drain(..).collect::<VecDeque<_>>();
+
+        let (mut reader, writer) = os_pipe::pipe()?;
+        commands.push_back(self.spawn_command(pipe_commands.pop_front().unwrap(), stdin, writer));
+
+        while pipe_commands.len() != 1 {
+            let next_cmd = pipe_commands.pop_front().unwrap();
+            let (next_reader, next_writer) = os_pipe::pipe()?;
+            commands.push_back(self.spawn_command(next_cmd, reader, next_writer));
+            reader = next_reader;
+        }
+
+        commands.push_back(self.spawn_command(pipe_commands.pop_front().unwrap(), reader, stdout));
+
+        while commands.len() != 1 {
+            let command = commands.pop_front().unwrap();
+            let _ = command.join().map_err(|err| format!("{:?}", err))?;
+        }
+        commands
+            .pop_front()
+            .unwrap()
+            .join()
+            .map_err(|err| format!("{:?}", err))?
     }
 
     /// Executes given ir::Command
@@ -65,16 +82,14 @@ impl Backend {
     /// This function will return an UnimplementedError for two or more commands in
     /// PipeCommand. Moreover, it will return any OS errors encountered during spawn
     /// of subprocess
-    pub fn spawn_command<Stdin, Stderr, Stdout>(
+    pub fn spawn_command<Stdin, Stdout>(
         &self,
         call_command: CallCommand,
         stdin: Stdin,
-        stderr: Stderr,
         stdout: Stdout,
     ) -> JoinHandle<Result<ExitStatus, Box<dyn Error + Send + Sync>>>
     where
         Stdin: Into<Stdio> + Read + Send + 'static,
-        Stderr: Into<Stdio> + Write + Send + 'static,
         Stdout: Into<Stdio> + Write + Send + 'static,
     {
         match call_command.command {
@@ -85,7 +100,7 @@ impl Backend {
                     .args(&call_command.argv[1..])
                     .stdin(stdin)
                     .stdout(stdout)
-                    .stderr(stderr)
+                    .stderr(Stdio::inherit())
                     .envs(call_command.envs);
 
                 thread::spawn(move || {
@@ -99,7 +114,7 @@ impl Backend {
             }
             crate::ir::Command::Builtin(builtin_command) => thread::spawn(move || {
                 let mut stdin = stdin;
-                let mut stderr = stderr;
+                let mut stderr = io::stderr();
                 let mut stdout = stdout;
                 Ok(builtin_command.exec(call_command.argv, &mut stdin, &mut stderr, &mut stdout))
             }),
@@ -185,7 +200,7 @@ mod tests {
 
     #[test]
     fn test_call_command_stdout() -> Result<(), Box<dyn Error + Send + Sync>> {
-        let backend = Backend;
+        let backend = Backend::new();
         let test_str = "Hello, world!";
         let command = PipeCommand {
             commands: vec![CallCommand {
@@ -196,10 +211,9 @@ mod tests {
         };
 
         let (stdin_reader, _stdin_writer) = os_pipe::pipe()?;
-        let (_stderr_reader, stderr_writer) = os_pipe::pipe()?;
         let (mut stdout_reader, stdout_writer) = os_pipe::pipe()?;
 
-        let status = backend.exec(command, stdin_reader, stderr_writer, stdout_writer)?;
+        let status = backend.exec(command, stdin_reader, stdout_writer)?;
         assert!(status.is_ok());
 
         let mut stdout_output = String::new();
@@ -294,34 +308,34 @@ mod tests {
     //     Ok(())
     // }
 
-    // #[test]
-    // fn test_multiple_command_pipe() -> Result<(), Box<dyn Error>> {
-    //     let backend = Backend::new();
-    //     let pipe_command = PipeCommand {
-    //         commands: vec![
-    //             CallCommand {
-    //                 argv: vec!["echo".into(), "Hello World".into()],
-    //                 envs: HashMap::new(),
-    //             },
-    //             CallCommand {
-    //                 argv: vec!["tr".into(), "-d".into(), "o".into()],
-    //                 envs: HashMap::new(),
-    //             },
-    //             CallCommand {
-    //                 argv: vec!["tr".into(), "-d".into(), "e".into()],
-    //                 envs: HashMap::new(),
-    //             },
-    //         ],
-    //     };
+    #[test]
+    fn test_multiple_command_pipe() -> Result<(), Box<dyn Error>> {
+        let backend = Backend::new();
+        let pipe_command = PipeCommand {
+            commands: vec![
+                CallCommand {
+                    argv: vec!["echo".into(), "Hello World".into()],
+                    envs: HashMap::new(),
+                },
+                CallCommand {
+                    argv: vec!["tr".into(), "-d".into(), "o".into()],
+                    envs: HashMap::new(),
+                },
+                CallCommand {
+                    argv: vec!["tr".into(), "-d".into(), "e".into()],
+                    envs: HashMap::new(),
+                },
+            ],
+        };
 
-    //     let output =
-    //         backend.exec_pipe_command_with_io(pipe_command, Stdio::null(), Stdio::piped())?;
-    //     assert!(output.is_some());
-    //     let output = output.unwrap();
-    //     assert!(output.status.success());
-    //     assert!(String::from_utf8_lossy(&output.stdout).contains("Hll Wrld"));
-    //     Ok(())
-    // }
+        let output =
+            backend.exec_pipe_command_with_io(pipe_command, Stdio::null(), Stdio::piped())?;
+        assert!(output.is_some());
+        let output = output.unwrap();
+        assert!(output.status.success());
+        assert!(String::from_utf8_lossy(&output.stdout).contains("Hll Wrld"));
+        Ok(())
+    }
 
     // #[test]
     // fn test_pipe_do_not_stop_on_exit_code() -> Result<(), Box<dyn Error>> {
