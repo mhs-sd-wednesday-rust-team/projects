@@ -23,14 +23,14 @@ fn main() -> Result<(), Box<dyn Error>> {
         };
 
         match backend.exec(command, dup_stdin()?, dup_stdout()?) {
-            Ok(exit_status) => match exit_status {
-                Err(code) => {
+            Ok(exit_status) => match exit_status.code() {
+                Some(code) if code != 0 => {
                     eprintln!("exited with code {}", code);
                 }
                 _ => {}
             },
             Err(err) => {
-                eprintln!("{}", err);
+                eprintln!("shell error: {}", err);
                 continue;
             }
         };

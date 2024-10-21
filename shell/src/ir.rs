@@ -1,14 +1,12 @@
 use std::{
     collections::HashMap,
+    error::Error,
     fmt::Debug,
     io::{Read, Write},
 };
 
-use crate::{
-    backend::ExitStatus,
-    builtins::{
-        cat::CatCommand, echo::EchoCommand, exit::ExitCommand, pwd::PwdCommand, wc::WcCommand,
-    },
+use crate::builtins::{
+    cat::CatCommand, echo::EchoCommand, exit::ExitCommand, pwd::PwdCommand, wc::WcCommand,
 };
 
 #[derive(Debug)]
@@ -49,5 +47,5 @@ pub trait BuiltinCommand: Debug {
         stdin: &mut dyn Read,
         stderr: &mut dyn Write,
         stdout: &mut dyn Write,
-    ) -> ExitStatus;
+    ) -> Result<(), Box<dyn Error + Sync + Send>>;
 }

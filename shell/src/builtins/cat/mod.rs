@@ -1,4 +1,4 @@
-use crate::{backend::ExitStatus, ir::BuiltinCommand};
+use crate::ir::BuiltinCommand;
 use clap::Parser;
 use std::{
     error::Error,
@@ -23,23 +23,16 @@ impl BuiltinCommand for CatCommand {
         &self,
         args: Vec<String>,
         _stdin: &mut dyn Read,
-        stderr: &mut dyn Write,
+        _stderr: &mut dyn Write,
         stdout: &mut dyn Write,
-    ) -> ExitStatus {
-        let mut capture_stderr = |err: &dyn Error| {
-            write!(stderr, "{}", err);
-            1
-        };
-
-        let args = Args::try_parse_from(args.into_iter()).map_err(|err| capture_stderr(&err))?;
-        let mut file = File::open(args.file).map_err(|err| capture_stderr(&err))?;
+    ) -> Result<(), Box<dyn Error + Sync + Send>> {
+        let args = Args::try_parse_from(args.into_iter())?;
+        let mut file = File::open(args.file)?;
 
         let mut buf = String::default();
-        file.read_to_string(&mut buf)
-            .map_err(|err| capture_stderr(&err))?;
+        file.read_to_string(&mut buf)?;
 
-        write!(stdout, "{}", buf);
-
-        ExitStatus::Ok(())
+        write!(stdout, "{}", buf)?;
+        Ok(())
     }
 }
