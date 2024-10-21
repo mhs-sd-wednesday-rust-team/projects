@@ -1,6 +1,6 @@
 use std::{error::Error, fs::File, io::BufReader};
 
-use crate::{backend::ExitStatus, ir::BuiltinCommand};
+use crate::ir::BuiltinCommand;
 use clap::Parser;
 use counter_scope::CounterScope;
 use counters::{ByteCounter, CharacterCounter, MaxLineLengthCounter, NewlineCounter, WordCounter};
@@ -79,20 +79,15 @@ impl BuiltinCommand for WcCommand {
         &self,
         args: Vec<String>,
         _stdin: &mut dyn std::io::Read,
-        stderr: &mut dyn std::io::Write,
+        _stderr: &mut dyn std::io::Write,
         stdout: &mut dyn std::io::Write,
-    ) -> ExitStatus {
-        let mut capture_stderr = |err: &dyn Error| {
-            write!(stderr, "{}", err);
-            1
-        };
-
-        let args = Args::try_parse_from(args.into_iter()).map_err(|err| capture_stderr(&err))?;
+    ) -> Result<(), Box<dyn Error + Sync + Send>> {
+        let args = Args::try_parse_from(args.into_iter())?;
         let mut scope = CounterScope::from(&args);
         let mut stat_table = StatTable::default();
 
         for path in args.file.as_slice() {
-            let file = File::open(path).map_err(|err| capture_stderr(&err))?;
+            let file = File::open(path)?;
             let mut buf = BufReader::new(file);
 
             for ch in buf.chars().map(|c| c.unwrap()) {
@@ -106,8 +101,7 @@ impl BuiltinCommand for WcCommand {
             stat_table.add_row("total".to_string(), scope.total());
         }
 
-        write!(stdout, "{}", stat_table);
-
-        ExitStatus::Ok(())
+        write!(stdout, "{}\n", stat_table)?;
+        Ok(())
     }
 }

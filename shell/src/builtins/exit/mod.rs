@@ -1,6 +1,6 @@
-use crate::{backend::ExitStatus, ir::BuiltinCommand};
+use crate::ir::BuiltinCommand;
 use clap::Parser;
-use std::process::exit;
+use std::{error::Error, process::exit};
 
 #[derive(Parser, Debug, Default)]
 #[command(version, about, long_about = None)]
@@ -22,7 +22,7 @@ impl BuiltinCommand for ExitCommand {
         _stdin: &mut dyn std::io::Read,
         _stderr: &mut dyn std::io::Write,
         _stdout: &mut dyn std::io::Write,
-    ) -> ExitStatus {
+    ) -> Result<(), Box<dyn Error + Sync + Send>> {
         let args = Args::try_parse_from(args.into_iter()).unwrap_or_default();
         exit(args.code.unwrap_or_default())
     }

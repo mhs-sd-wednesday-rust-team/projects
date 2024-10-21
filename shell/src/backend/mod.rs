@@ -1,7 +1,6 @@
 use std::{
     collections::VecDeque,
     error::Error,
-    fs::File,
     io::{self, Read, Write},
     process::{Command as ProcessCommand, Stdio},
     thread::{self, JoinHandle},
@@ -13,7 +12,20 @@ use crate::ir::PipeCommand;
 pub struct Backend;
 
 /// Represents the exit status of a command execution.
-pub type ExitStatus = Result<(), i32>;
+#[derive(Debug, Default)]
+pub struct ExitStatus {
+    code: Option<i32>,
+}
+
+impl ExitStatus {
+    pub fn new(code: Option<i32>) -> Self {
+        Self { code }
+    }
+
+    pub fn code(&self) -> Option<i32> {
+        self.code
+    }
+}
 
 /// Represents the backend that handles the execution of shell commands.
 impl Backend {
@@ -39,7 +51,7 @@ impl Backend {
         Stdout: Into<Stdio> + Write + Send + 'static,
     {
         if pipe.commands.is_empty() {
-            return Ok(ExitStatus::Ok(()));
+            return Ok(ExitStatus::default());
         } else if pipe.commands.len() == 1 {
             let command = pipe.commands.pop().unwrap();
             let join_res = self.spawn_command(command, stdin, stdout).join();
@@ -104,19 +116,26 @@ impl Backend {
                     .envs(call_command.envs);
 
                 thread::spawn(move || {
-                    let status = command.spawn()?.wait()?;
-                    match status.code() {
-                        Some(0) => Ok(ExitStatus::Ok(())),
-                        Some(code) => Ok(ExitStatus::Err(code)),
-                        None => Err("no exit code".into()),
-                    }
+                    command
+                        .spawn()?
+                        .wait()
+                        .map(|status| ExitStatus::new(status.code()))
+                        .map_err(|err| format!("{}", err).into())
                 })
             }
             crate::ir::Command::Builtin(builtin_command) => thread::spawn(move || {
                 let mut stdin = stdin;
                 let mut stderr = io::stderr();
                 let mut stdout = stdout;
-                Ok(builtin_command.exec(call_command.argv, &mut stdin, &mut stderr, &mut stdout))
+                match builtin_command.exec(call_command.argv, &mut stdin, &mut stderr, &mut stdout)
+                {
+                    Ok(_) => Ok(ExitStatus::default()),
+                    Err(err) => {
+                        write!(stderr, "{}\n", err)
+                            .map_err(|_| "failed to write error to stderr")?;
+                        Ok(ExitStatus::new(Some(1)))
+                    }
+                }
             }),
         }
     }
