@@ -1,5 +1,7 @@
 use std::error::Error;
 
+use os_pipe::{dup_stdin, dup_stdout};
+
 mod backend;
 mod builtins;
 mod frontend;
@@ -20,7 +22,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
         };
 
-        match backend.exec(command) {
+        match backend.exec(command, dup_stdin()?, dup_stdout()?) {
             Ok(exit_status) => match exit_status.code() {
                 Some(code) if code != 0 => {
                     eprintln!("exited with code {}", code);
@@ -28,7 +30,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 _ => {}
             },
             Err(err) => {
-                eprintln!("{}", err);
+                eprintln!("shell error: {}", err);
                 continue;
             }
         };

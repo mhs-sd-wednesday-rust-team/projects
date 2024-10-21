@@ -1,13 +1,11 @@
 use std::{error::Error, fs::File, io::BufReader};
 
-use crate::backend::ExitStatus;
+use crate::ir::BuiltinCommand;
 use clap::Parser;
 use counter_scope::CounterScope;
 use counters::{ByteCounter, CharacterCounter, MaxLineLengthCounter, NewlineCounter, WordCounter};
 use stat_table::StatTable;
 use utf8_chars::BufReadCharsExt;
-
-use super::BuiltinCommand;
 
 mod counter_scope;
 mod counters;
@@ -73,10 +71,17 @@ impl From<&Args> for CounterScope {
 /// WcCommand processes specified files and counts their contents.
 /// For each file, it gathers statistics such as lines, words, and characters,
 /// and outputs a summary, including a total if multiple files are specified.
+#[derive(Default, Debug)]
 pub struct WcCommand;
 
 impl BuiltinCommand for WcCommand {
-    fn exec(args: Vec<String>) -> Result<ExitStatus, Box<dyn Error>> {
+    fn exec(
+        &self,
+        args: Vec<String>,
+        _stdin: &mut dyn std::io::Read,
+        _stderr: &mut dyn std::io::Write,
+        stdout: &mut dyn std::io::Write,
+    ) -> Result<(), Box<dyn Error + Sync + Send>> {
         let args = Args::try_parse_from(args.into_iter())?;
         let mut scope = CounterScope::from(&args);
         let mut stat_table = StatTable::default();
@@ -96,8 +101,7 @@ impl BuiltinCommand for WcCommand {
             stat_table.add_row("total".to_string(), scope.total());
         }
 
-        println!("{}", stat_table);
-
-        Ok(ExitStatus::default())
+        writeln!(stdout, "{}", stat_table)?;
+        Ok(())
     }
 }

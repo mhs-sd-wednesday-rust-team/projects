@@ -1,6 +1,6 @@
 use super::env::Environment;
 use crate::frontend::{Arg, CompoundArg, ParseError, ShellCommandInterm};
-use crate::ir::{CallCommand, PipeCommand};
+use crate::ir::{CallCommand, Command, PipeCommand};
 use std::collections::HashMap;
 
 /// Compiler transforms inner shell command representation
@@ -36,10 +36,11 @@ impl Compiler {
                 ShellCommandInterm::Execute { name, args } => {
                     let name = arg_to_str(name);
                     let args: Vec<String> = args.into_iter().map(arg_to_str).collect();
-                    let mut argv = vec![name];
+                    let mut argv = vec![name.clone()];
                     argv.extend(args);
                     commands.push(CallCommand {
                         envs: HashMap::new(),
+                        command: Command::from_name(&name),
                         argv,
                     })
                 }
