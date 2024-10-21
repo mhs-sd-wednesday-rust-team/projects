@@ -23,7 +23,7 @@ impl BuiltinCommand for ExitCommand {
         _stderr: &mut dyn std::io::Write,
         _stdout: &mut dyn std::io::Write,
     ) -> Result<(), Box<dyn Error + Sync + Send>> {
-        let args = Args::try_parse_from(args.into_iter()).unwrap_or_default();
+        let args = Args::try_parse_from(args).unwrap_or_default();
         exit(args.code.unwrap_or_default())
     }
 }

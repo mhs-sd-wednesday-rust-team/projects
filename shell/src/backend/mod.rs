@@ -51,7 +51,7 @@ impl Backend {
         Stdout: Into<Stdio> + Write + Send + 'static,
     {
         if pipe.commands.is_empty() {
-            return Ok(ExitStatus::default());
+            return Ok(ExitStatus::new(Some(0)));
         } else if pipe.commands.len() == 1 {
             let command = pipe.commands.pop().unwrap();
             let join_res = self.spawn_command(command, stdin, stdout).join();
@@ -129,9 +129,9 @@ impl Backend {
                 let mut stdout = stdout;
                 match builtin_command.exec(call_command.argv, &mut stdin, &mut stderr, &mut stdout)
                 {
-                    Ok(_) => Ok(ExitStatus::default()),
+                    Ok(_) => Ok(ExitStatus::new(Some(0))),
                     Err(err) => {
-                        write!(stderr, "{}\n", err)
+                        writeln!(stderr, "{}", err)
                             .map_err(|_| "failed to write error to stderr")?;
                         Ok(ExitStatus::new(Some(1)))
                     }
@@ -233,7 +233,7 @@ mod tests {
         let (mut stdout_reader, stdout_writer) = os_pipe::pipe()?;
 
         let status = backend.exec(command, stdin_reader, stdout_writer)?;
-        assert!(status.is_ok());
+        assert!(matches!(status.code(), Some(0)));
 
         let mut stdout_output = String::new();
         stdout_reader.read_to_string(&mut stdout_output)?;
@@ -328,31 +328,37 @@ mod tests {
     // }
 
     #[test]
-    fn test_multiple_command_pipe() -> Result<(), Box<dyn Error>> {
+    fn test_multiple_command_pipe() -> Result<(), Box<dyn Error + Sync + Send>> {
         let backend = Backend::new();
         let pipe_command = PipeCommand {
             commands: vec![
                 CallCommand {
                     argv: vec!["echo".into(), "Hello World".into()],
+                    command: Command::Builtin(Box::<EchoCommand>::default()),
                     envs: HashMap::new(),
                 },
                 CallCommand {
                     argv: vec!["tr".into(), "-d".into(), "o".into()],
+                    command: Command::Call,
                     envs: HashMap::new(),
                 },
                 CallCommand {
                     argv: vec!["tr".into(), "-d".into(), "e".into()],
+                    command: Command::Call,
                     envs: HashMap::new(),
                 },
             ],
         };
 
-        let output =
-            backend.exec_pipe_command_with_io(pipe_command, Stdio::null(), Stdio::piped())?;
-        assert!(output.is_some());
-        let output = output.unwrap();
-        assert!(output.status.success());
-        assert!(String::from_utf8_lossy(&output.stdout).contains("Hll Wrld"));
+        let (stdin_reader, _stdin_writer) = os_pipe::pipe()?;
+        let (mut stdout_reader, stdout_writer) = os_pipe::pipe()?;
+
+        let status = backend.exec(pipe_command, stdin_reader, stdout_writer)?;
+        assert!(matches!(status.code(), Some(0)));
+
+        let mut stdout_output = String::new();
+        stdout_reader.read_to_string(&mut stdout_output)?;
+        assert_eq!(stdout_output, "Hll Wrld\n");
         Ok(())
     }
 

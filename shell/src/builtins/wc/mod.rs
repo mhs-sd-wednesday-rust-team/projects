@@ -101,7 +101,7 @@ impl BuiltinCommand for WcCommand {
             stat_table.add_row("total".to_string(), scope.total());
         }
 
-        write!(stdout, "{}\n", stat_table)?;
+        writeln!(stdout, "{}", stat_table)?;
         Ok(())
     }
 }
