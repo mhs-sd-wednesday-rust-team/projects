@@ -54,7 +54,7 @@ impl Backend {
             return Ok(ExitStatus::new(Some(0)));
         } else if pipe.commands.len() == 1 {
             let command = pipe.commands.pop().unwrap();
-            let join_res = self.spawn_command(command, stdin, stdout).join();
+            let join_res = self.spawn_command(command, stdin, stdout, false).join();
             return match join_res {
                 Ok(res) => res,
                 Err(err) => Err(format!("{:?}", err).into()),
@@ -65,16 +65,16 @@ impl Backend {
         let mut pipe_commands = pipe.commands.drain(..).collect::<VecDeque<_>>();
 
         let (mut reader, writer) = os_pipe::pipe()?;
-        commands.push_back(self.spawn_command(pipe_commands.pop_front().unwrap(), stdin, writer));
+        commands.push_back(self.spawn_command(pipe_commands.pop_front().unwrap(), stdin, writer, false));
 
         while pipe_commands.len() != 1 {
             let next_cmd = pipe_commands.pop_front().unwrap();
             let (next_reader, next_writer) = os_pipe::pipe()?;
-            commands.push_back(self.spawn_command(next_cmd, reader, next_writer));
+            commands.push_back(self.spawn_command(next_cmd, reader, next_writer, true));
             reader = next_reader;
         }
 
-        commands.push_back(self.spawn_command(pipe_commands.pop_front().unwrap(), reader, stdout));
+        commands.push_back(self.spawn_command(pipe_commands.pop_front().unwrap(), reader, stdout, true));
 
         while commands.len() != 1 {
             let command = commands.pop_front().unwrap();
@@ -99,6 +99,7 @@ impl Backend {
         call_command: CallCommand,
         stdin: Stdin,
         stdout: Stdout,
+        piped_input: bool
     ) -> JoinHandle<Result<ExitStatus, Box<dyn Error + Send + Sync>>>
     where
         Stdin: Into<Stdio> + Read + Send + 'static,
@@ -127,7 +128,7 @@ impl Backend {
                 let mut stdin = stdin;
                 let mut stderr = io::stderr();
                 let mut stdout = stdout;
-                match builtin_command.exec(call_command.argv, &mut stdin, &mut stderr, &mut stdout)
+                match builtin_command.exec(call_command.argv, &mut stdin, &mut stderr, &mut stdout, piped_input)
                 {
                     Ok(_) => Ok(ExitStatus::new(Some(0))),
                     Err(err) => {

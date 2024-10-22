@@ -41,11 +41,20 @@ impl Command {
 }
 
 pub trait BuiltinCommand: Debug {
+    fn read_from_stdin(&self, stdin: &mut dyn Read) -> Result<String, Box<dyn Error + Sync + Send>> {
+        let mut stdin_string: String = String::new();
+        if let Err(e) = stdin.read_to_string(&mut stdin_string) {
+            return Err(e.into())
+        }
+        Ok(stdin_string.trim().to_string())
+    }
+
     fn exec(
         &self,
         args: Vec<String>,
         stdin: &mut dyn Read,
         stderr: &mut dyn Write,
         stdout: &mut dyn Write,
+        piped_input: bool
     ) -> Result<(), Box<dyn Error + Sync + Send>>;
 }

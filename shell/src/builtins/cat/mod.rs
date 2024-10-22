@@ -22,12 +22,18 @@ impl BuiltinCommand for CatCommand {
     fn exec(
         &self,
         args: Vec<String>,
-        _stdin: &mut dyn Read,
+        stdin: &mut dyn Read,
         _stderr: &mut dyn Write,
         stdout: &mut dyn Write,
+        piped_input: bool
     ) -> Result<(), Box<dyn Error + Sync + Send>> {
-        let args = Args::try_parse_from(args.into_iter())?;
-        let mut file = File::open(args.file)?;
+        let file = if piped_input {
+            self.read_from_stdin(stdin)?
+        } else {
+            let args = Args::try_parse_from(args.into_iter())?;
+            args.file
+        };
+        let mut file = File::open(file)?;
 
         let mut buf = String::default();
         file.read_to_string(&mut buf)?;

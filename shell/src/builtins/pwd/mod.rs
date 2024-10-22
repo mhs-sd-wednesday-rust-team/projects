@@ -14,9 +14,10 @@ impl BuiltinCommand for PwdCommand {
         _stdin: &mut dyn std::io::Read,
         _stderr: &mut dyn std::io::Write,
         stdout: &mut dyn std::io::Write,
+        _piped_input: bool
     ) -> Result<(), Box<dyn Error + Sync + Send>> {
         let path = current_dir()?;
-        write!(stdout, "{}", path.display())?;
+        writeln!(stdout, "{}", path.display())?;
         Ok(())
     }
 }

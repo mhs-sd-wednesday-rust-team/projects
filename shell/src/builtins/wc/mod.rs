@@ -81,6 +81,7 @@ impl BuiltinCommand for WcCommand {
         _stdin: &mut dyn std::io::Read,
         _stderr: &mut dyn std::io::Write,
         stdout: &mut dyn std::io::Write,
+        _piped_input: bool
     ) -> Result<(), Box<dyn Error + Sync + Send>> {
         let args = Args::try_parse_from(args.into_iter())?;
         let mut scope = CounterScope::from(&args);
