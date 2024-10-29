@@ -14,7 +14,7 @@ pub struct PipeCommand {
     pub commands: Vec<CallCommand>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct CallCommand {
     pub envs: HashMap<String, String>,
     pub command: Command,

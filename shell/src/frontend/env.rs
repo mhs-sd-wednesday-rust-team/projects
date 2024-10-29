@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Environment(HashMap<String, String>);
 
 impl Environment {

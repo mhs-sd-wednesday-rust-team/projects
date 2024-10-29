@@ -25,7 +25,7 @@ impl Compiler {
                     .inner
                     .iter()
                     .map(|p| match p {
-                        Arg::String(str) => str.inner(),
+                        Arg::String(str) => str.inner(&env_copy),
                         Arg::Var(name) => env_copy.get(name),
                         Arg::Number(n) => n.to_string(),
                     })

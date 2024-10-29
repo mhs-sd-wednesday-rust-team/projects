@@ -2,6 +2,7 @@ use crate::ir::PipeCommand;
 use conch_parser::ast;
 use conch_parser::lexer::Lexer;
 use conch_parser::parse::DefaultParser;
+use env::Environment;
 use std::fmt::{Debug, Display};
 
 pub mod compiler;
@@ -10,17 +11,33 @@ mod env;
 #[derive(Debug, Clone, PartialEq)]
 pub enum StringArg {
     #[allow(dead_code)]
-    DoubleQuoted(String),
+    DoubleQuoted(Vec<Arg>),
     SingleQuoted(String),
     Simple(String),
 }
 
 impl StringArg {
-    fn inner(&self) -> String {
+    fn inner(&self, env: &Environment) -> String {
         match self {
-            StringArg::DoubleQuoted(inner)
-            | StringArg::SingleQuoted(inner)
-            | StringArg::Simple(inner) => inner.clone(),
+            StringArg::DoubleQuoted(inner) => {
+                let strings_list: Vec<String> = inner
+                    .iter()
+                    .map(|a| match a {
+                        Arg::String(string_arg) => match string_arg {
+                            StringArg::DoubleQuoted(_) => {
+                                panic!("Recursive DoubleQuoted string met.")
+                            }
+                            StringArg::SingleQuoted(inner) | StringArg::Simple(inner) => {
+                                inner.clone()
+                            }
+                        },
+                        Arg::Var(name) => env.get(name),
+                        Arg::Number(n) => n.to_string(),
+                    })
+                    .collect();
+                strings_list.join("")
+            }
+            StringArg::SingleQuoted(inner) | StringArg::Simple(inner) => inner.clone(),
         }
     }
 }
@@ -118,11 +135,7 @@ fn parse_top_level_word<T: Debug + Display>(
             ast::Word::DoubleQuoted(dq) => {
                 let parsed: Result<Vec<Arg>, ParseError> =
                     dq.into_iter().map(parse_simple_word).collect();
-                if let Some(first) = parsed?.first() {
-                    first.clone()
-                } else {
-                    return Err("Doublde quoted string is empty".into());
-                }
+                Arg::String(StringArg::DoubleQuoted(parsed?))
             }
             ast::Word::SingleQuoted(sq) => Arg::String(StringArg::SingleQuoted(format!("{sq}"))),
         };
@@ -231,5 +244,163 @@ impl Frontend {
     pub fn parse(&mut self, input: &str) -> Result<PipeCommand, ParseError> {
         let interm = parse_intermediate(input)?;
         self.c.compile(interm)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use crate::{
+        frontend::{env::Environment, Arg, StringArg},
+        ir::CallCommand,
+    };
+
+    use super::{parse_intermediate, Frontend, ShellCommandInterm};
+
+    #[test]
+    fn test_parse_intermidiate() {
+        let input = r#"x=1 | y= | com1 2 arg2 | com2 'arg3' "arg4" | com3 "a$x$y" $x$y "#;
+        let interm = parse_intermediate(input).unwrap();
+        let mut interm_iter = interm.into_iter();
+
+        let ShellCommandInterm::Assign { name, value } = interm_iter.next().unwrap() else {
+            panic!("Expected Assign")
+        };
+        assert_eq!(name, "x");
+        assert_eq!(*value.unwrap().inner.first().unwrap(), Arg::Number(1.0));
+
+        let ShellCommandInterm::Assign { name, value } = interm_iter.next().unwrap() else {
+            panic!("Expected Assign")
+        };
+        assert_eq!(name, "y");
+        assert_eq!(value, None);
+
+        let ShellCommandInterm::Execute { name, args } = interm_iter.next().unwrap() else {
+            panic!("Expected Execute")
+        };
+        assert_eq!(
+            *name.inner.first().unwrap(),
+            Arg::String(StringArg::Simple(String::from("com1")))
+        );
+        let mut args_iter = args.into_iter();
+        assert_eq!(args_iter.next().unwrap().inner, vec![Arg::Number(2.0)]);
+        assert_eq!(
+            args_iter.next().unwrap().inner,
+            vec![Arg::String(StringArg::Simple(String::from("arg2")))]
+        );
+
+        let ShellCommandInterm::Execute { name, args } = interm_iter.next().unwrap() else {
+            panic!("Expected Execute")
+        };
+        assert_eq!(
+            *name.inner.first().unwrap(),
+            Arg::String(StringArg::Simple(String::from("com2")))
+        );
+        let mut args_iter = args.into_iter();
+        assert_eq!(
+            args_iter.next().unwrap().inner,
+            vec![Arg::String(StringArg::SingleQuoted(String::from("arg3"))),]
+        );
+        assert_eq!(
+            args_iter.next().unwrap().inner,
+            vec![Arg::String(StringArg::DoubleQuoted(vec![Arg::String(
+                StringArg::Simple(String::from("arg4"))
+            )]))]
+        );
+
+        let ShellCommandInterm::Execute { name, args } = interm_iter.next().unwrap() else {
+            panic!("Expected Execute")
+        };
+
+        assert_eq!(
+            *name.inner.first().unwrap(),
+            Arg::String(StringArg::Simple(String::from("com3")))
+        );
+        let mut args_iter = args.into_iter();
+        assert_eq!(
+            args_iter.next().unwrap().inner,
+            vec![Arg::String(StringArg::DoubleQuoted(vec![
+                Arg::String(StringArg::Simple(String::from("a"))),
+                Arg::Var(String::from("x")),
+                Arg::Var(String::from("y"))
+            ]))]
+        );
+        assert_eq!(
+            args_iter.next().unwrap().inner,
+            vec![Arg::Var(String::from("x")), Arg::Var(String::from("y"))]
+        );
+    }
+
+    #[test]
+    fn test_parse_full_no_vars() {
+        let mut front = Frontend::new();
+        let input = r#"echo 1 '2' "3" | cat foo bar"#;
+        let mut commands = front.parse(&input).unwrap().commands.into_iter();
+        assert_eq!(
+            commands.next().unwrap(),
+            CallCommand {
+                envs: HashMap::new(),
+                argv: vec![
+                    String::from("echo"),
+                    String::from("1"),
+                    String::from("2"),
+                    String::from("3")
+                ]
+            }
+        );
+        assert_eq!(
+            commands.next().unwrap(),
+            CallCommand {
+                envs: HashMap::new(),
+                argv: vec![
+                    String::from("cat"),
+                    String::from("foo"),
+                    String::from("bar")
+                ]
+            }
+        );
+    }
+
+    #[test]
+    fn test_parse_full_assign_change_state() {
+        let mut front = Frontend::new();
+        let input = r#"x=1"#;
+        front.parse(&input).unwrap();
+        let mut expected_env = Environment::new();
+        expected_env.set("x", String::from("1"));
+
+        assert_eq!(front.c.env, expected_env);
+    }
+
+    #[test]
+    fn test_parse_full_assign_is_not_visible() {
+        let mut front = Frontend::new();
+        let input = r#"x=1 | echo $x"#;
+        let mut commands = front.parse(&input).unwrap().commands.into_iter();
+        assert_eq!(
+            commands.next().unwrap(),
+            CallCommand {
+                envs: HashMap::new(),
+                argv: vec![String::from("echo"), String::from("")]
+            }
+        );
+    }
+
+    #[test]
+    fn test_parse_full_assign_is_visible() {
+        let mut front = Frontend::new();
+        let input = r#"x=1"#;
+        front.parse(&input).unwrap();
+
+        let input = r#"echo $x"#;
+        let mut commands = front.parse(&input).unwrap().commands.into_iter();
+        assert_eq!(
+            commands.next().unwrap(),
+            CallCommand {
+                envs: HashMap::new(),
+                argv: vec![String::from("echo"), String::from("1")]
+            }
+        );
     }
 }
