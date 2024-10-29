@@ -186,19 +186,17 @@ pub fn parse_intermediate(input: &str) -> Result<Vec<ShellCommandInterm>, ParseE
         if !simple_command.redirects_or_env_vars.is_empty() {
             // Case of variable assign.
             let command_values = simple_command.redirects_or_env_vars;
-            let assign = command_values
-                .first()
-                .expect("var assign expected.")
-                .to_owned();
-            let ast::RedirectOrEnvVar::EnvVar(name, value) = assign else {
-                return Err("Expected variable declaration. Redirection is not supported.".into());
-            };
-            let value = value.map(parse_top_level_word);
-            let value = match value {
-                None => None,
-                Some(value) => Some(value?),
-            };
-            piped_commands.push(ShellCommandInterm::Assign { name, value });
+            for assign in command_values {
+                let ast::RedirectOrEnvVar::EnvVar(name, value) = assign else {
+                    return Err("Expected variable declaration. Redirection is not supported.".into());
+                };
+                let value = value.map(parse_top_level_word);
+                let value = match value {
+                    None => None,
+                    Some(value) => Some(value?),
+                };
+                piped_commands.push(ShellCommandInterm::Assign { name, value });
+            }
             continue;
         }
 
