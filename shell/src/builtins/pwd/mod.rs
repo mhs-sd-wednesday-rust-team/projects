@@ -1,17 +1,22 @@
-use crate::backend::ExitStatus;
-use std::env::current_dir;
-
-use super::BuiltinCommand;
+use crate::ir::BuiltinCommand;
+use std::{env::current_dir, error::Error};
 
 /// Implements the pwd built-in command.
 ///
 /// PwdCommand retrieves and prints the current working directory to the standard output.
+#[derive(Default, Debug)]
 pub struct PwdCommand;
 
 impl BuiltinCommand for PwdCommand {
-    fn exec(_: Vec<String>) -> Result<ExitStatus, Box<dyn std::error::Error>> {
+    fn exec(
+        &self,
+        _args: Vec<String>,
+        _stdin: &mut dyn std::io::Read,
+        _stderr: &mut dyn std::io::Write,
+        stdout: &mut dyn std::io::Write,
+    ) -> Result<(), Box<dyn Error + Sync + Send>> {
         let path = current_dir()?;
-        println!("{}", path.display());
-        Ok(ExitStatus::default())
+        write!(stdout, "{}", path.display())?;
+        Ok(())
     }
 }
