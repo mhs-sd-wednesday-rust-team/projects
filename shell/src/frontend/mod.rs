@@ -403,4 +403,25 @@ mod tests {
             }
         );
     }
+
+    #[test]
+    fn test_parse_full_compund_compilation_works() {
+        let mut front = Frontend::new();
+        let input = r#"x=1 | y=2 | x=3 | z=4"#;
+        front.parse(&input).unwrap();
+
+        let input = r#"echo $x$y$z "name$x$y$z""#;
+        let mut commands = front.parse(&input).unwrap().commands.into_iter();
+        assert_eq!(
+            commands.next().unwrap(),
+            CallCommand {
+                envs: HashMap::new(),
+                argv: vec![
+                    String::from("echo"),
+                    String::from("324"),
+                    String::from("name324")
+                ]
+            }
+        );
+    }
 }
