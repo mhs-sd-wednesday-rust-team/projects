@@ -40,7 +40,21 @@ impl Command {
     }
 }
 
+impl PartialEq for Command {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Command::Call, Command::Call) => true,
+            (Command::Builtin(cmd_self), Command::Builtin(cmd_other)) => {
+                cmd_self.tag() == cmd_other.tag()
+            }
+            _ => false,
+        }
+    }
+}
+
 pub trait BuiltinCommand: Debug {
+    fn tag(&self) -> &'static str;
+
     fn exec(
         &self,
         args: Vec<String>,

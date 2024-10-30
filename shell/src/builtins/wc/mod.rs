@@ -104,4 +104,8 @@ impl BuiltinCommand for WcCommand {
         writeln!(stdout, "{}", stat_table)?;
         Ok(())
     }
+
+    fn tag(&self) -> &'static str {
+        "wc"
+    }
 }
