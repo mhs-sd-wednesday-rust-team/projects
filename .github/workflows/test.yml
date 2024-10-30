@@ -3,9 +3,9 @@ permissions:
 on:
   workflow_dispatch:
   push:
-    branches: [main, task/shell-implementation]
+    branches: [main, task/shell-implementation, task/shell/pipes]
   pull_request:
-    branches: [main, task/shell-implementation]
+    branches: [main, task/shell-implementation, task/shell/pipes]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
