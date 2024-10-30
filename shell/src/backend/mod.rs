@@ -243,89 +243,104 @@ mod tests {
         Ok(())
     }
 
-    // #[test]
-    // fn test_call_command_passes_custom_environment() -> Result<(), Box<dyn Error>> {
-    //     let backend = Backend;
-    //     let test_key = "some_key";
-    //     let test_value = "some_value";
-    //     let command = CallCommand {
-    //         envs: HashMap::from([(test_key.to_string(), test_value.to_string())]),
-    //         argv: vec!["env".to_string()],
-    //     };
+    #[test]
+    fn test_call_command_passes_custom_environment() -> Result<(), Box<dyn Error + Sync + Send>> {
+        let backend = Backend::new();
+        let test_key = "some_key";
+        let test_value = "some_value";
+        let command = PipeCommand {
+            commands: vec![
+                CallCommand {
+                    envs: HashMap::from([(test_key.to_string(), test_value.to_string())]),
+                    command: Command::Call,
+                    argv: vec!["env".to_string()],
+                },
+                CallCommand {
+                    argv: vec!["grep".into(), "^some_key=".into()],
+                    command: Command::Call,
+                    envs: HashMap::new(),
+                },
+            ],
+        };
 
-    //     let execution_result = backend.exec_command_with_io(
-    //         command,
-    //         Stdio::piped(),
-    //         Stdio::piped(),
-    //         Stdio::piped(),
-    //     )?;
-    //     let Some(output) = execution_result else {
-    //         panic!("Expected to spawn some and get its output");
-    //     };
+        let (stdin_reader, _stdin_writer) = os_pipe::pipe()?;
+        let (mut stdout_reader, stdout_writer) = os_pipe::pipe()?;
 
-    //     assert_eq!(Some(0), output.status.code());
+        let status = backend.exec(command, stdin_reader, stdout_writer)?;
+        assert!(matches!(status.code(), Some(0)));
 
-    //     let stdout_content = String::from_utf8_lossy(&output.stdout);
-    //     assert!(stdout_content.contains(&format!("{}={}\n", test_key, test_value)));
+        let mut stdout_output = String::new();
+        stdout_reader.read_to_string(&mut stdout_output)?;
 
-    //     Ok(())
-    // }
+        assert_eq!(stdout_output, format!("{}={}\n", test_key, test_value));
 
-    // #[test]
-    // fn test_failing_command_does_not_fail_shell() -> Result<(), Box<dyn Error>> {
-    //     let backend = Backend;
-    //     let command = CallCommand {
-    //         envs: HashMap::new(),
-    //         argv: vec!["sh".to_string(), "-c".to_string(), "exit 5".to_string()],
-    //     };
+        Ok(())
+    }
 
-    //     let execution_result = backend.exec_command_with_io(
-    //         command,
-    //         Stdio::piped(),
-    //         Stdio::piped(),
-    //         Stdio::piped(),
-    //     )?;
-    //     let Some(output) = execution_result else {
-    //         panic!("Expected to spawn some and get its output");
-    //     };
+    #[test]
+    fn test_failing_command_does_not_fail_shell() -> Result<(), Box<dyn Error + Sync + Send>> {
+        let backend = Backend::new();
+        let command = PipeCommand {
+            commands: vec![CallCommand {
+                envs: HashMap::new(),
+                command: Command::Call,
+                argv: vec!["sh".to_string(), "-c".to_string(), "exit 5".to_string()],
+            }],
+        };
 
-    //     assert_eq!(Some(5), output.status.code());
-    //     Ok(())
-    // }
+        let (stdin_reader, _stdin_writer) = os_pipe::pipe()?;
+        let (_stdout_reader, stdout_writer) = os_pipe::pipe()?;
 
-    // #[test]
-    // fn test_empty_pipes_do_not_execute() -> Result<(), Box<dyn Error>> {
-    //     let backend = Backend::new();
-    //     let pipe_command = PipeCommand { commands: vec![] };
-    //     let result = backend.exec_pipe_command_with_io(pipe_command, Stdio::null(), Stdio::null());
-    //     assert!(result.is_err(), "Expected an error for empty pipe");
-    //     Ok(())
-    // }
+        let status = backend.exec(command, stdin_reader, stdout_writer)?;
+        assert!(matches!(status.code(), Some(5)));
 
-    // #[test]
-    // fn test_two_command_pipe() -> Result<(), Box<dyn Error>> {
-    //     let backend = Backend::new();
-    //     let pipe_command = PipeCommand {
-    //         commands: vec![
-    //             CallCommand {
-    //                 argv: vec!["echo".into(), "Hello".into()],
-    //                 envs: HashMap::new(),
-    //             },
-    //             CallCommand {
-    //                 argv: vec!["grep".into(), "Hello".into()],
-    //                 envs: HashMap::new(),
-    //             },
-    //         ],
-    //     };
+        Ok(())
+    }
 
-    //     let output =
-    //         backend.exec_pipe_command_with_io(pipe_command, Stdio::null(), Stdio::piped())?;
-    //     assert!(output.is_some());
-    //     let output = output.unwrap();
-    //     assert!(output.status.success());
-    //     assert!(String::from_utf8_lossy(&output.stdout).contains("Hello"));
-    //     Ok(())
-    // }
+    #[test]
+    fn test_empty_pipes_do_not_execute() -> Result<(), Box<dyn Error + Sync + Send>> {
+        let backend = Backend::new();
+        let pipe_command = PipeCommand { commands: vec![] };
+
+        let (stdin_reader, _stdin_writer) = os_pipe::pipe()?;
+        let (_stdout_reader, stdout_writer) = os_pipe::pipe()?;
+
+        let status = backend.exec(pipe_command, stdin_reader, stdout_writer)?;
+        assert!(matches!(status.code(), Some(0)));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_two_command_pipe() -> Result<(), Box<dyn Error + Sync + Send>> {
+        let backend = Backend::new();
+        let pipe_command = PipeCommand {
+            commands: vec![
+                CallCommand {
+                    argv: vec!["echo".into(), "Hello".into()],
+                    command: Command::Builtin(Box::<EchoCommand>::default()),
+                    envs: HashMap::new(),
+                },
+                CallCommand {
+                    argv: vec!["grep".into(), "Hello".into()],
+                    command: Command::Call,
+                    envs: HashMap::new(),
+                },
+            ],
+        };
+
+        let (stdin_reader, _stdin_writer) = os_pipe::pipe()?;
+        let (mut stdout_reader, stdout_writer) = os_pipe::pipe()?;
+
+        let status = backend.exec(pipe_command, stdin_reader, stdout_writer)?;
+        assert!(matches!(status.code(), Some(0)));
+
+        let mut stdout_output = String::new();
+        stdout_reader.read_to_string(&mut stdout_output)?;
+        assert_eq!(stdout_output, "Hello\n");
+
+        Ok(())
+    }
 
     #[test]
     fn test_multiple_command_pipe() -> Result<(), Box<dyn Error + Sync + Send>> {
@@ -359,31 +374,38 @@ mod tests {
         let mut stdout_output = String::new();
         stdout_reader.read_to_string(&mut stdout_output)?;
         assert_eq!(stdout_output, "Hll Wrld\n");
+
         Ok(())
     }
 
-    // #[test]
-    // fn test_pipe_do_not_stop_on_exit_code() -> Result<(), Box<dyn Error>> {
-    //     let backend = Backend::new();
-    //     let pipe_command = PipeCommand {
-    //         commands: vec![
-    //             CallCommand {
-    //                 argv: vec!["false".into()],
-    //                 envs: HashMap::new(),
-    //             },
-    //             CallCommand {
-    //                 argv: vec!["echo".into(), "Continued".into()],
-    //                 envs: HashMap::new(),
-    //             },
-    //         ],
-    //     };
+    #[test]
+    fn test_pipe_do_not_stop_on_exit_code() -> Result<(), Box<dyn Error + Send + Sync>> {
+        let backend = Backend::new();
+        let pipe_command = PipeCommand {
+            commands: vec![
+                CallCommand {
+                    argv: vec!["false".into()],
+                    command: Command::Call,
+                    envs: HashMap::new(),
+                },
+                CallCommand {
+                    argv: vec!["echo".into(), "Continued".into()],
+                    command: Command::Builtin(Box::<EchoCommand>::default()),
+                    envs: HashMap::new(),
+                },
+            ],
+        };
 
-    //     let output =
-    //         backend.exec_pipe_command_with_io(pipe_command, Stdio::null(), Stdio::piped())?;
+        let (stdin_reader, _stdin_writer) = os_pipe::pipe()?;
+        let (mut stdout_reader, stdout_writer) = os_pipe::pipe()?;
 
-    //     assert!(output.is_some());
-    //     let output = output.unwrap();
-    //     assert!(String::from_utf8_lossy(&output.stdout).contains("Continued"));
-    //     Ok(())
-    // }
+        let status = backend.exec(pipe_command, stdin_reader, stdout_writer)?;
+        assert!(matches!(status.code(), Some(0)));
+
+        let mut stdout_output = String::new();
+        stdout_reader.read_to_string(&mut stdout_output)?;
+        assert_eq!(stdout_output, "Continued\n");
+
+        Ok(())
+    }
 }
