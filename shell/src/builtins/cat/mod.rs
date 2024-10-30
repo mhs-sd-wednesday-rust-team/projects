@@ -9,7 +9,7 @@ use std::{
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    file: String,
+    file: Option<String>,
 }
 
 /// Implements the cat built-in command.
@@ -22,12 +22,15 @@ impl BuiltinCommand for CatCommand {
     fn exec(
         &self,
         args: Vec<String>,
-        _stdin: &mut dyn Read,
+        stdin: &mut dyn Read,
         _stderr: &mut dyn Write,
         stdout: &mut dyn Write,
     ) -> Result<(), Box<dyn Error + Sync + Send>> {
         let args = Args::try_parse_from(args.into_iter())?;
-        let mut file = File::open(args.file)?;
+        let file = match args.file.as_deref() {
+            Some("-") | None => stdin,
+            Some(path) => &mut File::open(path)?,
+        };
 
         let mut buf = String::default();
         file.read_to_string(&mut buf)?;
