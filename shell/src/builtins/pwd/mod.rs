@@ -19,4 +19,8 @@ impl BuiltinCommand for PwdCommand {
         write!(stdout, "{}", path.display())?;
         Ok(())
     }
+
+    fn tag(&self) -> &'static str {
+        "pwd"
+    }
 }

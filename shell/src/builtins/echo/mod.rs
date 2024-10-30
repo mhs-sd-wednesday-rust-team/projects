@@ -32,4 +32,8 @@ impl BuiltinCommand for EchoCommand {
         write!(stdout, "{}", output)?;
         Ok(())
     }
+
+    fn tag(&self) -> &'static str {
+        "echo"
+    }
 }

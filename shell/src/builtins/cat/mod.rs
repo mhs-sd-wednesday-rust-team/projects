@@ -35,4 +35,8 @@ impl BuiltinCommand for CatCommand {
         write!(stdout, "{}", buf)?;
         Ok(())
     }
+
+    fn tag(&self) -> &'static str {
+        "cat"
+    }
 }
