@@ -78,16 +78,23 @@ impl BuiltinCommand for WcCommand {
     fn exec(
         &self,
         args: Vec<String>,
-        _stdin: &mut dyn std::io::Read,
+        stdin: &mut dyn std::io::Read,
         _stderr: &mut dyn std::io::Write,
         stdout: &mut dyn std::io::Write,
     ) -> Result<(), Box<dyn Error + Sync + Send>> {
-        let args = Args::try_parse_from(args.into_iter())?;
+        let mut args = Args::try_parse_from(args.into_iter())?;
         let mut scope = CounterScope::from(&args);
         let mut stat_table = StatTable::default();
 
+        if args.file.is_empty() {
+            args.file.push("-".to_string());
+        }
+
         for path in args.file.as_slice() {
-            let file = File::open(path)?;
+            let file = match path.as_str() {
+                "-" => &mut *stdin,
+                path => &mut File::open(path)?,
+            };
             let mut buf = BufReader::new(file);
 
             for ch in buf.chars().map(|c| c.unwrap()) {
