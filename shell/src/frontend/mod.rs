@@ -337,7 +337,7 @@ mod tests {
     fn test_parse_full_no_vars() {
         let mut front = Frontend::new();
         let input = r#"echo 1 '2' "3" | cat foo bar"#;
-        let mut commands = front.parse(&input).unwrap().commands.into_iter();
+        let mut commands = front.parse(input).unwrap().commands.into_iter();
         assert_eq!(
             commands.next().unwrap(),
             CallCommand {
@@ -369,7 +369,7 @@ mod tests {
     fn test_parse_full_assign_change_state() {
         let mut front = Frontend::new();
         let input = r#"x=1"#;
-        front.parse(&input).unwrap();
+        front.parse(input).unwrap();
         let mut expected_env = Environment::new();
         expected_env.set("x", String::from("1"));
 
@@ -380,7 +380,7 @@ mod tests {
     fn test_parse_full_assign_is_not_visible() {
         let mut front = Frontend::new();
         let input = r#"x=1 | echo $x"#;
-        let mut commands = front.parse(&input).unwrap().commands.into_iter();
+        let mut commands = front.parse(input).unwrap().commands.into_iter();
         assert_eq!(
             commands.next().unwrap(),
             CallCommand {
@@ -395,10 +395,10 @@ mod tests {
     fn test_parse_full_assign_is_visible() {
         let mut front = Frontend::new();
         let input = r#"x=1"#;
-        front.parse(&input).unwrap();
+        front.parse(input).unwrap();
 
         let input = r#"echo $x"#;
-        let mut commands = front.parse(&input).unwrap().commands.into_iter();
+        let mut commands = front.parse(input).unwrap().commands.into_iter();
         assert_eq!(
             commands.next().unwrap(),
             CallCommand {
@@ -413,10 +413,10 @@ mod tests {
     fn test_parse_full_compund_compilation_works() {
         let mut front = Frontend::new();
         let input = r#"x=1 y=2 x=3 z=4"#;
-        front.parse(&input).unwrap();
+        front.parse(input).unwrap();
 
         let input = r#"echo $x$y$z "name$x$y$z""#;
-        let mut commands = front.parse(&input).unwrap().commands.into_iter();
+        let mut commands = front.parse(input).unwrap().commands.into_iter();
         assert_eq!(
             commands.next().unwrap(),
             CallCommand {
