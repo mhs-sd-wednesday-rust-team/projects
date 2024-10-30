@@ -26,4 +26,8 @@ impl BuiltinCommand for ExitCommand {
         let args = Args::try_parse_from(args).unwrap_or_default();
         exit(args.code.unwrap_or_default())
     }
+
+    fn tag(&self) -> &'static str {
+        "exit"
+    }
 }

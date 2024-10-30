@@ -188,7 +188,9 @@ pub fn parse_intermediate(input: &str) -> Result<Vec<ShellCommandInterm>, ParseE
             let command_values = simple_command.redirects_or_env_vars;
             for assign in command_values {
                 let ast::RedirectOrEnvVar::EnvVar(name, value) = assign else {
-                    return Err("Expected variable declaration. Redirection is not supported.".into());
+                    return Err(
+                        "Expected variable declaration. Redirection is not supported.".into(),
+                    );
                 };
                 let value = value.map(parse_top_level_word);
                 let value = match value {
@@ -250,6 +252,7 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::{
+        builtins::{cat::CatCommand, echo::EchoCommand},
         frontend::{env::Environment, Arg, StringArg},
         ir::CallCommand,
     };
@@ -339,6 +342,7 @@ mod tests {
             commands.next().unwrap(),
             CallCommand {
                 envs: HashMap::new(),
+                command: crate::ir::Command::Builtin(Box::<EchoCommand>::default()),
                 argv: vec![
                     String::from("echo"),
                     String::from("1"),
@@ -351,6 +355,7 @@ mod tests {
             commands.next().unwrap(),
             CallCommand {
                 envs: HashMap::new(),
+                command: crate::ir::Command::Builtin(Box::<CatCommand>::default()),
                 argv: vec![
                     String::from("cat"),
                     String::from("foo"),
@@ -380,6 +385,7 @@ mod tests {
             commands.next().unwrap(),
             CallCommand {
                 envs: HashMap::new(),
+                command: crate::ir::Command::Builtin(Box::<EchoCommand>::default()),
                 argv: vec![String::from("echo"), String::from("")]
             }
         );
@@ -397,6 +403,7 @@ mod tests {
             commands.next().unwrap(),
             CallCommand {
                 envs: HashMap::new(),
+                command: crate::ir::Command::Builtin(Box::<EchoCommand>::default()),
                 argv: vec![String::from("echo"), String::from("1")]
             }
         );
@@ -405,7 +412,7 @@ mod tests {
     #[test]
     fn test_parse_full_compund_compilation_works() {
         let mut front = Frontend::new();
-        let input = r#"x=1 | y=2 | x=3 | z=4"#;
+        let input = r#"x=1 y=2 x=3 z=4"#;
         front.parse(&input).unwrap();
 
         let input = r#"echo $x$y$z "name$x$y$z""#;
@@ -414,6 +421,7 @@ mod tests {
             commands.next().unwrap(),
             CallCommand {
                 envs: HashMap::new(),
+                command: crate::ir::Command::Builtin(Box::<EchoCommand>::default()),
                 argv: vec![
                     String::from("echo"),
                     String::from("324"),
