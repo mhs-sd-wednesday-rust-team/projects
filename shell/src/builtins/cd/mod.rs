@@ -1,0 +1,35 @@
+use std::{env::set_current_dir, error::Error};
+
+use crate::ir::BuiltinCommand;
+use clap::Parser;
+
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    path: String,
+}
+
+#[derive(Default, Debug)]
+pub struct CdCommand;
+
+// Implementation of cd builtin-command
+//
+// Changes the current working directory to the provided path
+impl BuiltinCommand for CdCommand {
+    fn exec(
+        &self,
+        args: Vec<String>,
+        _stdin: &mut dyn std::io::Read,
+        _stderr: &mut dyn std::io::Write,
+        _stdout: &mut dyn std::io::Write,
+    ) -> Result<(), Box<dyn Error + Sync + Send>> {
+        let args = Args::try_parse_from(args.into_iter())?;
+
+        set_current_dir(args.path)?;
+        Ok(())
+    }
+
+    fn tag(&self) -> &'static str {
+        "cd"
+    }
+}

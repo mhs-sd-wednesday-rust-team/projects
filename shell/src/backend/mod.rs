@@ -162,7 +162,7 @@ impl Backend {
 mod tests {
     use super::*;
     use crate::{
-        builtins::{echo::EchoCommand, grep::GrepCommand},
+        builtins::{cd::CdCommand, echo::EchoCommand, grep::GrepCommand},
         ir::{CallCommand, Command},
     };
     use std::collections::HashMap;
@@ -401,6 +401,71 @@ mod tests {
             )
         );
 
+        Ok(())
+    }
+
+    #[test]
+    fn test_cd_existing_path() -> Result<(), Box<dyn Error + Send + Sync>> {
+        use std::env;
+        use std::path::PathBuf;
+        use tempfile::tempdir;
+        let backend = Backend::new();
+        let original_dir = env::current_dir().unwrap();
+
+        let temp_dir = tempdir().unwrap();
+        let temp_path = temp_dir.path();
+
+        let pipe_command = PipeCommand {
+            commands: vec![CallCommand {
+                envs: HashMap::new(),
+                command: Command::Builtin(Box::<CdCommand>::default()),
+                argv: vec!["cd".to_string(), temp_path.to_str().unwrap().to_string()],
+            }],
+        };
+
+        let (stdin_reader, _stdin_writer) = os_pipe::pipe()?;
+        let (_, stdout_writer) = os_pipe::pipe()?;
+
+        let status = backend.exec(pipe_command, stdin_reader, stdout_writer)?;
+        assert!(matches!(status.code(), Some(0)));
+
+        let current_dir = env::current_dir().unwrap();
+        assert_eq!(current_dir, PathBuf::from(temp_path));
+
+        env::set_current_dir(original_dir).unwrap();
+        Ok(())
+    }
+
+    #[test]
+    fn test_cd_not_existing_path() -> Result<(), Box<dyn Error + Send + Sync>> {
+        use std::env;
+        use std::path::PathBuf;
+        use tempfile::tempdir;
+        let backend = Backend::new();
+        let original_dir = env::current_dir().unwrap();
+
+        let temp_dir = tempdir().unwrap();
+        let mut temp_path = PathBuf::from(temp_dir.path());
+        temp_path.push("not_existing_folder");
+
+        let pipe_command = PipeCommand {
+            commands: vec![CallCommand {
+                envs: HashMap::new(),
+                command: Command::Builtin(Box::<CdCommand>::default()),
+                argv: vec!["cd".to_string(), temp_path.to_str().unwrap().to_string()],
+            }],
+        };
+
+        let (stdin_reader, _stdin_writer) = os_pipe::pipe()?;
+        let (_, stdout_writer) = os_pipe::pipe()?;
+
+        let status = backend.exec(pipe_command, stdin_reader, stdout_writer)?;
+        assert!(!matches!(status.code(), Some(0)));
+
+        let current_dir = env::current_dir().unwrap();
+        assert_ne!(current_dir, PathBuf::from(temp_path));
+
+        env::set_current_dir(original_dir).unwrap();
         Ok(())
     }
 }
