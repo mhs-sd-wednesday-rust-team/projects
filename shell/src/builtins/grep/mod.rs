@@ -108,7 +108,7 @@ impl GrepCommand {
 
         match_report
             .iter()
-            .map(|(filename, match_groups)| {
+            .flat_map(|(filename, match_groups)| {
                 match_groups
                     .iter()
                     .map(|match_group| {
@@ -125,7 +125,6 @@ impl GrepCommand {
                     })
                     .collect::<Vec<Vec<String>>>()
             })
-            .flatten()
             .map(|group| group.join("\n"))
             .collect::<Vec<String>>()
             .join(format!("\n{}\n", Self::MATCH_GROUP_DELIM).as_str())
@@ -167,7 +166,7 @@ impl BuiltinCommand for GrepCommand {
 
         let match_report_str = Self::format_match_report(&match_report);
         // println!("{}", match_report_str);
-        stdout.write(match_report_str.as_bytes())?;
+        stdout.write_all(match_report_str.as_bytes())?;
         Ok(())
     }
 
