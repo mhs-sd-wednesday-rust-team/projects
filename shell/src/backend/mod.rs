@@ -323,7 +323,7 @@ mod tests {
                 },
                 CallCommand {
                     argv: vec!["grep".into(), "Hello".into()],
-                    command: Command::Call,
+                    command: Command::Builtin(Box::<GrepCommand>::default()),
                     envs: HashMap::new(),
                 },
             ],
@@ -421,16 +421,24 @@ mod tests {
                     "-A".to_string(),
                     "2".to_string(),
                     "Red".to_string(),
-                    "/Users/a.salyu/Desktop/tmp.txt".to_string(), // A\nRed1\nA\nG\nC\nRed2\nE\nF\nRedRed\nRed\nBlueRed\nReed
+                    "-".to_string(),
                 ],
             }],
         };
 
-        let (stdin_reader, _stdin_writer) = os_pipe::pipe()?;
+        let (stdin_reader, mut stdin_writer) = os_pipe::pipe()?;
         let (mut stdout_reader, stdout_writer) = os_pipe::pipe()?;
 
-        let status = backend.exec(pipe_command, stdin_reader, stdout_writer)?;
-        assert!(matches!(status.code(), Some(0)));
+        let status = thread::spawn(move || backend.exec(pipe_command, stdin_reader, stdout_writer));
+
+        write!(
+            stdin_writer,
+            "A\nRed1\nA\nG\nC\nRed2\nE\nF\nRedRed\nRed\nBlueRed\nReed"
+        )
+        .unwrap();
+        drop(stdin_writer);
+
+        assert!(matches!(status.join().unwrap().unwrap().code(), Some(0)));
 
         let mut stdout_output = String::new();
         stdout_reader.read_to_string(&mut stdout_output)?;
@@ -439,7 +447,7 @@ mod tests {
             stdout_output,
             format!(
                 "{}",
-                "Red1\nA\nG\n--\nRed2\nE\nF\nRedRed\nRed\nBlueRed\nReed"
+                "Red1\nA\nG\n--\nRed2\nE\nF\nRedRed\nRed\nBlueRed\nReed\n"
             )
         );
 

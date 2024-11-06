@@ -165,8 +165,8 @@ impl BuiltinCommand for GrepCommand {
         }
 
         let match_report_str = Self::format_match_report(&match_report);
-        // println!("{}", match_report_str);
         stdout.write_all(match_report_str.as_bytes())?;
+        writeln!(stdout)?;
         Ok(())
     }
 
