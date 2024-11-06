@@ -6,8 +6,8 @@ use std::{
 };
 
 use crate::builtins::{
-    cat::CatCommand, cd::CdCommand, echo::EchoCommand, exit::ExitCommand, pwd::PwdCommand,
-    wc::WcCommand,
+    cat::CatCommand, cd::CdCommand, echo::EchoCommand, exit::ExitCommand, ls::LsCommand,
+    pwd::PwdCommand, wc::WcCommand,
 };
 
 #[derive(Debug)]
@@ -37,6 +37,7 @@ impl Command {
             "pwd" => Command::Builtin(Box::<PwdCommand>::default()),
             "wc" => Command::Builtin(Box::<WcCommand>::default()),
             "cd" => Command::Builtin(Box::<CdCommand>::default()),
+            "ls" => Command::Builtin(Box::<LsCommand>::default()),
             _ => Command::Call,
         }
     }

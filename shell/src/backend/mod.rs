@@ -160,9 +160,10 @@ impl Backend {
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
     use crate::{
-        builtins::{cd::CdCommand, echo::EchoCommand, grep::GrepCommand},
+        builtins::{cd::CdCommand, echo::EchoCommand, grep::GrepCommand, ls::LsCommand},
         ir::{CallCommand, Command},
     };
     use std::collections::HashMap;
@@ -492,6 +493,89 @@ mod tests {
         assert_eq!(current_dir, home_dir().unwrap());
 
         env::set_current_dir(original_dir).unwrap();
+        Ok(())
+    }
+
+    #[test]
+    fn test_ls_simple() -> Result<(), Box<dyn Error + Send + Sync>> {
+        use std::env;
+        use tempfile;
+        let backend = Backend::new();
+        let pipe_command = PipeCommand {
+            commands: vec![CallCommand {
+                envs: HashMap::new(),
+                command: Command::Builtin(Box::<LsCommand>::default()),
+                argv: vec!["ls".to_string()],
+            }],
+        };
+        let temp_dir = tempfile::tempdir()?;
+        let original_dir = env::current_dir()?;
+
+        env::set_current_dir(temp_dir.path())?;
+
+        let temp_dir_2 = tempfile::TempDir::new_in(temp_dir.path())?;
+        let temp_dir_3 = tempfile::TempDir::new_in(temp_dir.path())?;
+        let temp_dir_4 = tempfile::TempDir::new_in(temp_dir.path())?;
+
+        let (stdin_reader, _stdin_writer) = os_pipe::pipe()?;
+        let (mut stdout_reader, stdout_writer) = os_pipe::pipe()?;
+
+        let status = backend.exec(pipe_command, stdin_reader, stdout_writer)?;
+        assert!(matches!(status.code(), Some(0)));
+
+        let mut stdout_output = String::new();
+        stdout_reader.read_to_string(&mut stdout_output)?;
+
+        assert_eq!(
+            stdout_output,
+            format!(
+                "{}\n{}\n{}\n",
+                temp_dir_2.path().file_name().unwrap().to_str().unwrap(),
+                temp_dir_3.path().file_name().unwrap().to_str().unwrap(),
+                temp_dir_4.path().file_name().unwrap().to_str().unwrap(),
+            )
+        );
+        env::set_current_dir(original_dir).unwrap();
+        Ok(())
+    }
+
+    #[test]
+    fn test_ls_with_args() -> Result<(), Box<dyn Error + Send + Sync>> {
+        use tempfile;
+        let backend = Backend::new();
+        let temp_dir = tempfile::tempdir()?;
+        let pipe_command = PipeCommand {
+            commands: vec![CallCommand {
+                envs: HashMap::new(),
+                command: Command::Builtin(Box::<LsCommand>::default()),
+                argv: vec![
+                    "ls".to_string(),
+                    temp_dir.path().to_str().unwrap().to_string(),
+                ],
+            }],
+        };
+        let temp_dir_2 = tempfile::TempDir::new_in(temp_dir.path())?;
+        let temp_dir_3 = tempfile::TempDir::new_in(temp_dir.path())?;
+        let temp_dir_4 = tempfile::TempDir::new_in(temp_dir.path())?;
+
+        let (stdin_reader, _stdin_writer) = os_pipe::pipe()?;
+        let (mut stdout_reader, stdout_writer) = os_pipe::pipe()?;
+
+        let status = backend.exec(pipe_command, stdin_reader, stdout_writer)?;
+        assert!(matches!(status.code(), Some(0)));
+
+        let mut stdout_output = String::new();
+        stdout_reader.read_to_string(&mut stdout_output)?;
+
+        assert_eq!(
+            stdout_output,
+            format!(
+                "{}\n{}\n{}\n",
+                temp_dir_2.path().file_name().unwrap().to_str().unwrap(),
+                temp_dir_3.path().file_name().unwrap().to_str().unwrap(),
+                temp_dir_4.path().file_name().unwrap().to_str().unwrap(),
+            )
+        );
         Ok(())
     }
 }
