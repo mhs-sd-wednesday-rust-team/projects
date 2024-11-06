@@ -471,6 +471,8 @@ mod tests {
 
     #[test]
     fn test_cd_no_args() -> Result<(), Box<dyn Error + Send + Sync>> {
+        use home::home_dir;
+        use std::env;
         let backend = Backend::new();
         let pipe_command = PipeCommand {
             commands: vec![CallCommand {
@@ -487,8 +489,9 @@ mod tests {
         let status = backend.exec(pipe_command, stdin_reader, stdout_writer)?;
         assert!(matches!(status.code(), Some(0)));
         let current_dir = env::current_dir().unwrap();
-        assert_eq!(current_dir, original_dir);
+        assert_eq!(current_dir, home_dir().unwrap());
 
+        env::set_current_dir(original_dir).unwrap();
         Ok(())
     }
 }

@@ -2,6 +2,7 @@ use std::{env::set_current_dir, error::Error};
 
 use crate::ir::BuiltinCommand;
 use clap::Parser;
+use home::home_dir;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -23,9 +24,19 @@ impl BuiltinCommand for CdCommand {
         _stderr: &mut dyn std::io::Write,
         _stdout: &mut dyn std::io::Write,
     ) -> Result<(), Box<dyn Error + Sync + Send>> {
-        let args = Args::try_parse_from(args.into_iter())?;
+        let p: String;
+        if args.len() == 1 {
+            p = home_dir()
+                .ok_or("failed to get home_dir")?
+                .as_path()
+                .to_str()
+                .unwrap()
+                .to_string();
+        } else {
+            p = Args::try_parse_from(args.into_iter())?.path;
+        }
 
-        set_current_dir(args.path)?;
+        set_current_dir(p)?;
         Ok(())
     }
 
