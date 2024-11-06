@@ -14,9 +14,49 @@ concurrency:
 name: test
 
 jobs:
-  required:
-    runs-on: [ ubuntu-latest, windows-latest, macos-latest ]
+  test-ubuntu:
+    runs-on: ubuntu-latest
     name: ubuntu / stable
+    defaults:
+      run:
+        working-directory: ./shell
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Install stable
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+      - name: cargo generate-lockfile
+        if: hashFiles('Cargo.lock') == ''
+        run: cargo generate-lockfile
+      - name: cargo test --locked
+        run: cargo test --locked --all-features --all-targets
+
+  test-windows:
+    runs-on: windows-latest
+    name: windows / stable
+    defaults:
+      run:
+        working-directory: ./shell
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Install stable
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+      - name: cargo generate-lockfile
+        if: hashFiles('Cargo.lock') == ''
+        run: cargo generate-lockfile
+      - name: cargo test --locked
+        run: cargo test --locked --all-features --all-targets
+
+  test-macos:
+    runs-on: macos-latest
+    name: macos / stable
     defaults:
       run:
         working-directory: ./shell
