@@ -15,7 +15,7 @@ name: test
 
 jobs:
   required:
-    runs-on: ubuntu-latest
+    runs-on: [ ubuntu-latest, windows-latest, macos-latest ]
     name: ubuntu / stable
     defaults:
       run:
