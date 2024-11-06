@@ -212,7 +212,7 @@ impl Backend {
 mod tests {
     use super::*;
     use crate::{
-        builtins::echo::EchoCommand,
+        builtins::{echo::EchoCommand, grep::GrepCommand},
         ir::{CallCommand, Command},
     };
     use std::collections::HashMap;
@@ -405,6 +405,43 @@ mod tests {
         let mut stdout_output = String::new();
         stdout_reader.read_to_string(&mut stdout_output)?;
         assert_eq!(stdout_output, "Continued\n");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_grep_smoke() -> Result<(), Box<dyn Error + Send + Sync>> {
+        let backend = Backend::new();
+        let pipe_command = PipeCommand {
+            commands: vec![CallCommand {
+                envs: HashMap::new(),
+                command: Command::Builtin(Box::<GrepCommand>::default()),
+                argv: vec![
+                    "grep".to_string(),
+                    "-A".to_string(),
+                    "2".to_string(),
+                    "Red".to_string(),
+                    "/Users/a.salyu/Desktop/tmp.txt".to_string(), // A\nRed1\nA\nG\nC\nRed2\nE\nF\nRedRed\nRed\nBlueRed\nReed
+                ],
+            }],
+        };
+
+        let (stdin_reader, _stdin_writer) = os_pipe::pipe()?;
+        let (mut stdout_reader, stdout_writer) = os_pipe::pipe()?;
+
+        let status = backend.exec(pipe_command, stdin_reader, stdout_writer)?;
+        assert!(matches!(status.code(), Some(0)));
+
+        let mut stdout_output = String::new();
+        stdout_reader.read_to_string(&mut stdout_output)?;
+
+        assert_eq!(
+            stdout_output,
+            format!(
+                "{}",
+                "Red1\nA\nG\n--\nRed2\nE\nF\nRedRed\nRed\nBlueRed\nReed"
+            )
+        );
 
         Ok(())
     }
