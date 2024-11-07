@@ -10,5 +10,7 @@ conch-parser = "0.1.1"
 os_pipe = "1.2.1"
 utf8-chars = "3.0.4"
 regex = "1.11.1"
-tempfile = "3.13.0"
 home = "0.5.9"
+
+[dev-dependencies]
+tempfile = "3.13.0"
