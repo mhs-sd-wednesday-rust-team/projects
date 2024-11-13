@@ -166,6 +166,7 @@ mod tests {
         builtins::{cd::CdCommand, echo::EchoCommand, grep::GrepCommand, ls::LsCommand},
         ir::{CallCommand, Command},
     };
+    use serial_test::serial;
     use std::collections::HashMap;
 
     #[test]
@@ -406,6 +407,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_cd_existing_path() -> Result<(), Box<dyn Error + Send + Sync>> {
         use std::env;
         use std::path::PathBuf;
@@ -438,6 +440,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_cd_not_existing_path() -> Result<(), Box<dyn Error + Send + Sync>> {
         use std::env;
         use std::path::PathBuf;
@@ -471,6 +474,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_cd_no_args() -> Result<(), Box<dyn Error + Send + Sync>> {
         use home::home_dir;
         use std::env;
@@ -497,6 +501,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_ls_simple() -> Result<(), Box<dyn Error + Send + Sync>> {
         use std::env;
         use tempfile;
@@ -540,6 +545,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_ls_with_args() -> Result<(), Box<dyn Error + Send + Sync>> {
         use tempfile;
         let backend = Backend::new();
