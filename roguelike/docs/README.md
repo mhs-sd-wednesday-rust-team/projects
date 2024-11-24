@@ -1,14 +1,20 @@
 # Crab Knight Docs
 
-- [Обзор игры](./00-overview.md)
+- [Обзор игры](./overview.md)
 
 ## Архитектура
 
-[Обзор Архитектуры](./01-architecture.md)
+[Обзор Архитектуры](./architecture.md)
 
-- [Компонентная система](./02-component-system.md)
-- [Игровая карта](./03-map.md)
-- [Существа](./04-creatures.md)
-- [Герой](./05-hero.md)
-- [Действия](./06-actions.md)
-- [Предметы](./07-items.md)
+### Технологии
+
+- [Компонентная система](./component-system.md)
+- [Взаимодействие с терминалом](./rendering.md)
+
+### Игра
+
+- [Игровая карта](./map.md)
+- [Существа](./creatures.md)
+- [Герой](./hero.md)
+- [Действия](./actions.md)
+- [Предметы](./items.md)
