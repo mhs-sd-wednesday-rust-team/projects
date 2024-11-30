@@ -467,7 +467,7 @@ mod tests {
         assert!(!matches!(status.code(), Some(0)));
 
         let current_dir = env::current_dir().unwrap();
-        assert_ne!(current_dir, PathBuf::from(temp_path));
+        assert_ne!(current_dir, temp_path);
         assert_eq!(current_dir, original_dir);
 
         Ok(())
@@ -531,7 +531,7 @@ mod tests {
         let mut stdout_output = String::new();
         stdout_reader.read_to_string(&mut stdout_output)?;
 
-        let mut temp_dirs = vec![
+        let mut temp_dirs = [
             temp_dir_2.path().file_name().unwrap().to_str().unwrap(),
             temp_dir_3.path().file_name().unwrap().to_str().unwrap(),
             temp_dir_4.path().file_name().unwrap().to_str().unwrap(),
@@ -576,7 +576,7 @@ mod tests {
         let mut stdout_output = String::new();
         stdout_reader.read_to_string(&mut stdout_output)?;
 
-        let mut temp_dirs = vec![
+        let mut temp_dirs = [
             temp_dir_2.path().file_name().unwrap().to_str().unwrap(),
             temp_dir_3.path().file_name().unwrap().to_str().unwrap(),
             temp_dir_4.path().file_name().unwrap().to_str().unwrap(),
