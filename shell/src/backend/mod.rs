@@ -33,13 +33,30 @@ impl Backend {
         Self
     }
 
-    /// Executes given ir::PipeCommand
+    /// Executes a sequence of shell commands connected by pipes with specified input/output streams.
     ///
-    /// # Errors
+    /// This method sets up and runs a sequence of commands (provided as `PipeCommand`) that form
+    /// a pipeline where the output of each command is connected to the input of the next.
     ///
-    /// This function will return an Err for two or more commands in
-    /// PipeCommand. Moreover, it will return any OS errors encountered during spawn
-    /// of subprocess
+    /// # Returns
+    ///
+    /// Returns `Ok(Some(Output))` containing the output of the last command, if the execution is successful.
+    /// Returns `Err` if an error occurs during the setup or execution of the pipeline, such as if
+    /// the command fails to start.
+    ///
+    /// The function will also return an error if the `PipeCommand` contains fewer than two commands
+    /// since a meaningful pipeline requires at least two commands for data flow.
+    ///
+    /// # Error Handling
+    ///
+    /// This function captures standard error of the processes by inheriting stderr from the parent.
+    /// Errors such as failure in spawning a command or incorrect setup will return a boxed
+    /// error encompassing the issue.
+    ///
+    /// # Panics
+    ///
+    /// This function may panic if called with invalid `Stdio` objects (e.g., if trying to use the same
+    /// `Stdio` handle multiple times or after it has been transformed into a file descriptor).
     pub fn exec<Stdin, Stdout>(
         &self,
         mut pipe: PipeCommand,
@@ -139,80 +156,13 @@ impl Backend {
             }),
         }
     }
-
-    // Executes a sequence of shell commands connected by pipes with specified input/output streams.
-    //
-    // This method sets up and runs a sequence of commands (provided as `PipeCommand`) that form
-    // a pipeline where the output of each command is connected to the input of the next.
-    //
-    //
-    // # Returns
-    //
-    // Returns `Ok(Some(Output))` containing the output of the last command, if the execution is successful.
-    // Returns `Err` if an error occurs during the setup or execution of the pipeline, such as if
-    // the command fails to start.
-    //
-    // The function will also return an error if the `PipeCommand` contains fewer than two commands
-    // since a meaningful pipeline requires at least two commands for data flow.
-    //
-    // # Error Handling
-    //
-    // This function captures standard error of the processes by inheriting stderr from the parent.
-    // Errors such as failure in spawning a command or incorrect setup will return a boxed
-    // error encompassing the issue.
-    //
-    // # Panics
-    //
-    // This function may panic if called with invalid `Stdio` objects (e.g., if trying to use the same
-    // `Stdio` handle multiple times or after it has been transformed into a file descriptor).
-    // fn exec_pipe_command_with_io(
-    //     &self,
-    //     pipe_command: PipeCommand,
-    //     stdin: Stdio,
-    //     stdout: Stdio,
-    // ) -> Result<Option<Output>, Box<dyn Error>> {
-    //     let commands = pipe_command.commands;
-    //     if commands.len() < 2 {
-    //         return Err("Pipe must contain at least two commands".into());
-    //     }
-
-    //     // FIXME: нужно научиться запускать наши built-in как процессы, тогда тут можно будет порефачить и заюзать общий метод для запуска CallCommand
-    //     let first_comamnd = ProcessCommand::new(&commands[0].argv[0])
-    //         .args(&commands[0].argv[1..])
-    //         .stdin(stdin)
-    //         .stdout(Stdio::piped())
-    //         .stderr(Stdio::inherit())
-    //         .envs(commands[0].envs.clone())
-    //         .spawn()?;
-    //     let mut prev_command = first_comamnd;
-    //     for next_cmd in commands[1..commands.len() - 1].iter() {
-    //         prev_command = ProcessCommand::new(&next_cmd.argv[0])
-    //             .args(&next_cmd.argv[1..])
-    //             .stdin(Stdio::from(prev_command.stdout.unwrap()))
-    //             .stdout(Stdio::piped())
-    //             .stderr(Stdio::inherit())
-    //             .envs(next_cmd.envs.clone())
-    //             .spawn()?;
-    //     }
-
-    //     let last_cmd = commands.last().unwrap();
-    //     let final_command = ProcessCommand::new(&last_cmd.argv[0])
-    //         .args(&last_cmd.argv[1..])
-    //         .stdin(Stdio::from(prev_command.stdout.unwrap()))
-    //         .stdout(stdout)
-    //         .stderr(Stdio::inherit())
-    //         .envs(last_cmd.envs.clone())
-    //         .spawn()?;
-
-    //     Ok(Some(final_command.wait_with_output()?))
-    // }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{
-        builtins::echo::EchoCommand,
+        builtins::{echo::EchoCommand, grep::GrepCommand},
         ir::{CallCommand, Command},
     };
     use std::collections::HashMap;
@@ -323,7 +273,7 @@ mod tests {
                 },
                 CallCommand {
                     argv: vec!["grep".into(), "Hello".into()],
-                    command: Command::Call,
+                    command: Command::Builtin(Box::<GrepCommand>::default()),
                     envs: HashMap::new(),
                 },
             ],
@@ -405,6 +355,51 @@ mod tests {
         let mut stdout_output = String::new();
         stdout_reader.read_to_string(&mut stdout_output)?;
         assert_eq!(stdout_output, "Continued\n");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_grep_smoke() -> Result<(), Box<dyn Error + Send + Sync>> {
+        let backend = Backend::new();
+        let pipe_command = PipeCommand {
+            commands: vec![CallCommand {
+                envs: HashMap::new(),
+                command: Command::Builtin(Box::<GrepCommand>::default()),
+                argv: vec![
+                    "grep".to_string(),
+                    "-A".to_string(),
+                    "2".to_string(),
+                    "Red".to_string(),
+                    "-".to_string(),
+                ],
+            }],
+        };
+
+        let (stdin_reader, mut stdin_writer) = os_pipe::pipe()?;
+        let (mut stdout_reader, stdout_writer) = os_pipe::pipe()?;
+
+        let status = thread::spawn(move || backend.exec(pipe_command, stdin_reader, stdout_writer));
+
+        write!(
+            stdin_writer,
+            "A\nRed1\nA\nG\nC\nRed2\nE\nF\nRedRed\nRed\nBlueRed\nReed"
+        )
+        .unwrap();
+        drop(stdin_writer);
+
+        assert!(matches!(status.join().unwrap().unwrap().code(), Some(0)));
+
+        let mut stdout_output = String::new();
+        stdout_reader.read_to_string(&mut stdout_output)?;
+
+        assert_eq!(
+            stdout_output,
+            format!(
+                "{}",
+                "Red1\nA\nG\n--\nRed2\nE\nF\nRedRed\nRed\nBlueRed\nReed\n"
+            )
+        );
 
         Ok(())
     }

@@ -1,7 +1,7 @@
 name: Docs
 on:
   push:
-    branches: [task/shell-implementation]
+    branches: [main]
 permissions:
   contents: read
   pages: write
