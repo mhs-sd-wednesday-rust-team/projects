@@ -23,18 +23,17 @@ impl BuiltinCommand for LsCommand {
         _stderr: &mut dyn std::io::Write,
         stdout: &mut dyn std::io::Write,
     ) -> Result<(), Box<dyn Error + Sync + Send>> {
-        let p: path::PathBuf;
-        p = if args.len() == 1 {
+        let p: path::PathBuf = if args.len() == 1 {
             std::env::current_dir()?
         } else {
             let args = Args::try_parse_from(args.into_iter())?;
             path::Path::new(&args.path).to_path_buf()
         };
 
-        let entries = fs::read_dir(p)?;
+        let mut entries = fs::read_dir(p)?.collect::<Result<Vec<_>, _>>()?;
+        entries.sort_by_key(|entry| entry.file_name());
 
         for entry in entries {
-            let entry = entry?;
             let file_name = entry.file_name();
             writeln!(stdout, "{}", file_name.to_string_lossy())?;
         }

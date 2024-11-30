@@ -531,14 +531,17 @@ mod tests {
         let mut stdout_output = String::new();
         stdout_reader.read_to_string(&mut stdout_output)?;
 
+        let mut temp_dirs = vec![
+            temp_dir_2.path().file_name().unwrap().to_str().unwrap(),
+            temp_dir_3.path().file_name().unwrap().to_str().unwrap(),
+            temp_dir_4.path().file_name().unwrap().to_str().unwrap(),
+        ];
+
+        temp_dirs.sort();
+
         assert_eq!(
             stdout_output,
-            format!(
-                "{}\n{}\n{}\n",
-                temp_dir_2.path().file_name().unwrap().to_str().unwrap(),
-                temp_dir_3.path().file_name().unwrap().to_str().unwrap(),
-                temp_dir_4.path().file_name().unwrap().to_str().unwrap(),
-            )
+            format!("{}\n{}\n{}\n", temp_dirs[0], temp_dirs[1], temp_dirs[2],)
         );
         env::set_current_dir(original_dir).unwrap();
         Ok(())
@@ -573,14 +576,17 @@ mod tests {
         let mut stdout_output = String::new();
         stdout_reader.read_to_string(&mut stdout_output)?;
 
+        let mut temp_dirs = vec![
+            temp_dir_2.path().file_name().unwrap().to_str().unwrap(),
+            temp_dir_3.path().file_name().unwrap().to_str().unwrap(),
+            temp_dir_4.path().file_name().unwrap().to_str().unwrap(),
+        ];
+
+        temp_dirs.sort();
+
         assert_eq!(
             stdout_output,
-            format!(
-                "{}\n{}\n{}\n",
-                temp_dir_2.path().file_name().unwrap().to_str().unwrap(),
-                temp_dir_3.path().file_name().unwrap().to_str().unwrap(),
-                temp_dir_4.path().file_name().unwrap().to_str().unwrap(),
-            )
+            format!("{}\n{}\n{}\n", temp_dirs[0], temp_dirs[1], temp_dirs[2],)
         );
         Ok(())
     }
