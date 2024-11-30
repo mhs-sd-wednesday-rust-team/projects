@@ -160,11 +160,13 @@ impl Backend {
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
     use crate::{
-        builtins::{echo::EchoCommand, grep::GrepCommand},
+        builtins::{cd::CdCommand, echo::EchoCommand, grep::GrepCommand, ls::LsCommand},
         ir::{CallCommand, Command},
     };
+    use serial_test::serial;
     use std::collections::HashMap;
 
     #[test]
@@ -401,6 +403,191 @@ mod tests {
             )
         );
 
+        Ok(())
+    }
+
+    #[test]
+    #[serial]
+    fn test_cd_existing_path() -> Result<(), Box<dyn Error + Send + Sync>> {
+        use std::env;
+        use std::path::PathBuf;
+        use tempfile::tempdir;
+        let backend = Backend::new();
+        let original_dir = env::current_dir().unwrap();
+
+        let temp_dir = tempdir().unwrap();
+        let temp_path = temp_dir.path();
+
+        let pipe_command = PipeCommand {
+            commands: vec![CallCommand {
+                envs: HashMap::new(),
+                command: Command::Builtin(Box::<CdCommand>::default()),
+                argv: vec!["cd".to_string(), temp_path.to_str().unwrap().to_string()],
+            }],
+        };
+
+        let (stdin_reader, _stdin_writer) = os_pipe::pipe()?;
+        let (_, stdout_writer) = os_pipe::pipe()?;
+
+        let status = backend.exec(pipe_command, stdin_reader, stdout_writer)?;
+        assert!(matches!(status.code(), Some(0)));
+
+        let current_dir = env::current_dir().unwrap();
+        assert_eq!(current_dir, PathBuf::from(temp_path));
+
+        env::set_current_dir(original_dir).unwrap();
+        Ok(())
+    }
+
+    #[test]
+    #[serial]
+    fn test_cd_not_existing_path() -> Result<(), Box<dyn Error + Send + Sync>> {
+        use std::env;
+        use std::path::PathBuf;
+        use tempfile::tempdir;
+        let backend = Backend::new();
+        let original_dir = env::current_dir().unwrap();
+
+        let temp_dir = tempdir().unwrap();
+        let mut temp_path = PathBuf::from(temp_dir.path());
+        temp_path.push("not_existing_folder");
+
+        let pipe_command = PipeCommand {
+            commands: vec![CallCommand {
+                envs: HashMap::new(),
+                command: Command::Builtin(Box::<CdCommand>::default()),
+                argv: vec!["cd".to_string(), temp_path.to_str().unwrap().to_string()],
+            }],
+        };
+
+        let (stdin_reader, _stdin_writer) = os_pipe::pipe()?;
+        let (_, stdout_writer) = os_pipe::pipe()?;
+
+        let status = backend.exec(pipe_command, stdin_reader, stdout_writer)?;
+        assert!(!matches!(status.code(), Some(0)));
+
+        let current_dir = env::current_dir().unwrap();
+        assert_ne!(current_dir, temp_path);
+        assert_eq!(current_dir, original_dir);
+
+        Ok(())
+    }
+
+    #[test]
+    #[serial]
+    fn test_cd_no_args() -> Result<(), Box<dyn Error + Send + Sync>> {
+        use home::home_dir;
+        use std::env;
+        let backend = Backend::new();
+        let pipe_command = PipeCommand {
+            commands: vec![CallCommand {
+                envs: HashMap::new(),
+                command: Command::Builtin(Box::<CdCommand>::default()),
+                argv: vec!["cd".to_string()],
+            }],
+        };
+
+        let original_dir = env::current_dir().unwrap();
+        let (stdin_reader, _stdin_writer) = os_pipe::pipe()?;
+        let (_, stdout_writer) = os_pipe::pipe()?;
+
+        let status = backend.exec(pipe_command, stdin_reader, stdout_writer)?;
+        assert!(matches!(status.code(), Some(0)));
+        let current_dir = env::current_dir().unwrap();
+        assert_eq!(current_dir, home_dir().unwrap());
+
+        env::set_current_dir(original_dir).unwrap();
+        Ok(())
+    }
+
+    #[test]
+    #[serial]
+    fn test_ls_simple() -> Result<(), Box<dyn Error + Send + Sync>> {
+        use std::env;
+        use tempfile;
+        let backend = Backend::new();
+        let pipe_command = PipeCommand {
+            commands: vec![CallCommand {
+                envs: HashMap::new(),
+                command: Command::Builtin(Box::<LsCommand>::default()),
+                argv: vec!["ls".to_string()],
+            }],
+        };
+        let temp_dir = tempfile::tempdir()?;
+        let original_dir = env::current_dir()?;
+
+        env::set_current_dir(temp_dir.path())?;
+
+        let temp_dir_2 = tempfile::TempDir::new_in(temp_dir.path())?;
+        let temp_dir_3 = tempfile::TempDir::new_in(temp_dir.path())?;
+        let temp_dir_4 = tempfile::TempDir::new_in(temp_dir.path())?;
+
+        let (stdin_reader, _stdin_writer) = os_pipe::pipe()?;
+        let (mut stdout_reader, stdout_writer) = os_pipe::pipe()?;
+
+        let status = backend.exec(pipe_command, stdin_reader, stdout_writer)?;
+        assert!(matches!(status.code(), Some(0)));
+
+        let mut stdout_output = String::new();
+        stdout_reader.read_to_string(&mut stdout_output)?;
+
+        let mut temp_dirs = [
+            temp_dir_2.path().file_name().unwrap().to_str().unwrap(),
+            temp_dir_3.path().file_name().unwrap().to_str().unwrap(),
+            temp_dir_4.path().file_name().unwrap().to_str().unwrap(),
+        ];
+
+        temp_dirs.sort();
+
+        assert_eq!(
+            stdout_output,
+            format!("{}\n{}\n{}\n", temp_dirs[0], temp_dirs[1], temp_dirs[2],)
+        );
+        env::set_current_dir(original_dir).unwrap();
+        Ok(())
+    }
+
+    #[test]
+    #[serial]
+    fn test_ls_with_args() -> Result<(), Box<dyn Error + Send + Sync>> {
+        use tempfile;
+        let backend = Backend::new();
+        let temp_dir = tempfile::tempdir()?;
+        let pipe_command = PipeCommand {
+            commands: vec![CallCommand {
+                envs: HashMap::new(),
+                command: Command::Builtin(Box::<LsCommand>::default()),
+                argv: vec![
+                    "ls".to_string(),
+                    temp_dir.path().to_str().unwrap().to_string(),
+                ],
+            }],
+        };
+        let temp_dir_2 = tempfile::TempDir::new_in(temp_dir.path())?;
+        let temp_dir_3 = tempfile::TempDir::new_in(temp_dir.path())?;
+        let temp_dir_4 = tempfile::TempDir::new_in(temp_dir.path())?;
+
+        let (stdin_reader, _stdin_writer) = os_pipe::pipe()?;
+        let (mut stdout_reader, stdout_writer) = os_pipe::pipe()?;
+
+        let status = backend.exec(pipe_command, stdin_reader, stdout_writer)?;
+        assert!(matches!(status.code(), Some(0)));
+
+        let mut stdout_output = String::new();
+        stdout_reader.read_to_string(&mut stdout_output)?;
+
+        let mut temp_dirs = [
+            temp_dir_2.path().file_name().unwrap().to_str().unwrap(),
+            temp_dir_3.path().file_name().unwrap().to_str().unwrap(),
+            temp_dir_4.path().file_name().unwrap().to_str().unwrap(),
+        ];
+
+        temp_dirs.sort();
+
+        assert_eq!(
+            stdout_output,
+            format!("{}\n{}\n{}\n", temp_dirs[0], temp_dirs[1], temp_dirs[2],)
+        );
         Ok(())
     }
 }
