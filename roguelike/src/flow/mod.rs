@@ -3,8 +3,7 @@ use specs::{DispatcherBuilder, Join, World};
 use view::{GameView, PlayView};
 
 use crate::{
-    board::{board::Board, position::Position, tile::Tile},
-    term::{Term, TermEvents},
+    board::{board::Board, position::Position, tile::Tile}, player::Player, term::{Term, TermEvents}, view::view_tile::ViewTile
 };
 
 pub mod view;
@@ -17,7 +16,7 @@ pub enum GameState {
     Exit,
 }
 
-struct Level(usize);
+pub struct Level(usize);
 
 impl Level {
     pub fn as_number(&self) -> usize {
@@ -76,9 +75,10 @@ impl<'a> specs::System<'a> for RenderSystem {
         specs::ReadStorage<'a, Board>,
         specs::ReadStorage<'a, Position>,
         specs::ReadStorage<'a, Tile>,
+        specs::ReadStorage<'a, Player>,
     );
 
-    fn run(&mut self, (mut term, game_flow, board, pos, tile): Self::SystemData) {
+    fn run(&mut self, (mut term, game_flow, board, pos, tile, player): Self::SystemData) {
         // FIXME: better default tile
         static DEFAULT_TILE: Tile = Tile {
             kind: crate::board::tile::TileKind::Ground,
@@ -98,7 +98,7 @@ impl<'a> specs::System<'a> for RenderSystem {
                     GameState::Running => {
                         let board = board.as_slice().iter().next().unwrap();
 
-                        let mut table = vec![vec![&DEFAULT_TILE; board.width]; board.height];
+                        let mut table = vec![vec![ViewTile::WorldTile(&DEFAULT_TILE); board.width]; board.height];
 
                         for (pos, tile) in (&pos, &tile).join() {
                             // FIXME: handle x,y overflow
@@ -106,7 +106,16 @@ impl<'a> specs::System<'a> for RenderSystem {
                                 .get_mut(pos.y as usize)
                                 .unwrap()
                                 .get_mut(pos.x as usize)
-                                .unwrap() = &tile;
+                                .unwrap() = ViewTile::WorldTile(tile);
+                        }
+
+                        for (pos, _) in (&pos, &player).join() {
+                            // FIXME: handle x,y overflow
+                            *table
+                                .get_mut(pos.y as usize)
+                                .unwrap()
+                                .get_mut(pos.x as usize)
+                                .unwrap() = ViewTile::PlayerTile;
                         }
 
                         frame.render_widget(

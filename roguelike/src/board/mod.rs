@@ -9,7 +9,6 @@ mod generator;
 pub mod position;
 pub mod tile;
 
-pub mod view;
 
 pub fn register(_: &mut DispatcherBuilder, world: &mut World) -> anyhow::Result<()> {
     world.register::<Position>();
@@ -27,7 +26,7 @@ pub fn register(_: &mut DispatcherBuilder, world: &mut World) -> anyhow::Result<
 
     let map = generate_map();
 
-    let biome = tile::BiomeKind::Beach;
+    let biome = tile::BiomeKind::Castle;
 
     for x in 0..140 {
         for y in 0..60 {

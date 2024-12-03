@@ -4,13 +4,13 @@ use ratatui::{
 };
 
 use crate::{
-    board::{tile::Tile, view::BoardView},
     flow::Level,
+    view::{board::BoardView, view_tile::ViewTile},
 };
 
 pub struct PlayView<'a> {
     pub level: &'a Level,
-    pub tiles: &'a [&'a [&'a Tile]],
+    pub tiles: &'a [&'a [ViewTile<'a>]],
 }
 
 impl<'a> Widget for PlayView<'a> {

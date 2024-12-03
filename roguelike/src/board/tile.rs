@@ -10,6 +10,7 @@ pub enum TileKind {
 pub enum BiomeKind {
     Beach,
     Ocean,
+    Castle,
 }
 
 #[derive(Component, Clone)]

@@ -1,15 +1,16 @@
+
 use ratatui::{
     layout::Constraint,
     style::Style,
     widgets::{Cell, Row, Table, Widget},
 };
 
-use crate::board::{board::Board, position::Position, tile::Tile};
+use crate::{board::{board::Board, position::Position, tile::Tile}, player::Player};
 
-use super::tile::TileView;
+use super::{ view_tile::ViewTile};
 
 pub struct BoardView<'a> {
-    pub tiles: &'a [&'a [&'a Tile]],
+    pub tiles: &'a [&'a [ViewTile<'a>]],
 }
 
 impl<'a> Widget for BoardView<'a> {
@@ -21,7 +22,7 @@ impl<'a> Widget for BoardView<'a> {
         for table_row in self.tiles.iter() {
             let mut cells = vec![];
             for table_cell in table_row.iter() {
-                cells.push(Cell::new(TileView { tile: table_cell }));
+                cells.push(Cell::new(table_cell.clone().clone()));
             }
             rows.push(Row::new(cells));
         }

@@ -17,17 +17,21 @@ use std::io::{stdout, Result};
 use term::TermEvents;
 use tui_big_text::{BigText, PixelSize};
 
+mod player;
 mod board;
 mod flow;
 mod term;
+mod view;
 
 fn main() -> Result<()> {
     let mut world = World::new();
     let mut dispatcher_builder = DispatcherBuilder::new();
 
+
     term::register(&mut dispatcher_builder, &mut world).unwrap();
     board::register(&mut dispatcher_builder, &mut world).unwrap();
     flow::register(&mut dispatcher_builder, &mut world).unwrap();
+    player::register(&mut dispatcher_builder, &mut world).unwrap();
 
     let mut dispatcher = dispatcher_builder.build();
 
