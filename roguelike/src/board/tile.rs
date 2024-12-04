@@ -1,6 +1,6 @@
 use specs::{Component, DenseVecStorage};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum TileKind {
     Ground,
     Wall,

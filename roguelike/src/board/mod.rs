@@ -9,6 +9,29 @@ mod generator;
 pub mod position;
 pub mod tile;
 
+#[derive(Default)]
+pub struct WorldTileMap{
+    pub board: Vec<Tile>,
+    pub height: usize,
+    pub width: usize,
+}
+
+#[derive(Default)]
+pub struct WorldTileMapResource(pub WorldTileMap);
+
+impl WorldTileMap {
+
+    fn new_empty(width: usize, height: usize) -> Self {
+        Self { board: Vec::with_capacity(width*height), height: height, width: width }
+    }
+
+    pub fn xy_idx(x: i64, y: i64) -> usize {
+        (y as usize * BOARD_HEIGHT) + x as usize
+    }
+}
+
+const BOARD_HEIGHT: usize = 60;
+const BOARD_WIDTH: usize = 140;
 
 pub fn register(_: &mut DispatcherBuilder, world: &mut World) -> anyhow::Result<()> {
     world.register::<Position>();
@@ -19,8 +42,8 @@ pub fn register(_: &mut DispatcherBuilder, world: &mut World) -> anyhow::Result<
     world
         .create_entity()
         .with(Board {
-            width: 140,
-            height: 60,
+            width: BOARD_WIDTH,
+            height: BOARD_HEIGHT,
         })
         .build();
 
@@ -28,12 +51,19 @@ pub fn register(_: &mut DispatcherBuilder, world: &mut World) -> anyhow::Result<
 
     let biome = tile::BiomeKind::Castle;
 
-    for x in 0..140 {
-        for y in 0..60 {
+    let mut world_tile_map = WorldTileMap::new_empty(BOARD_WIDTH, BOARD_HEIGHT);
+
+    for y in 0..BOARD_HEIGHT {
+        for x in 0..BOARD_WIDTH {
             let tile_kind = if map.is_walkable(x, y) {
                 tile::TileKind::Ground
             } else {
                 tile::TileKind::Wall
+            };
+
+            let tile = Tile {
+                biome: biome.clone(),
+                kind: tile_kind,
             };
 
             world
@@ -42,13 +72,15 @@ pub fn register(_: &mut DispatcherBuilder, world: &mut World) -> anyhow::Result<
                     x: x as i64,
                     y: y as i64,
                 })
-                .with(Tile {
-                    biome: biome.clone(),
-                    kind: tile_kind,
-                })
+                .with(tile.clone())
                 .build();
+
+                world_tile_map.board.push(tile);
         }
     }
+
+    world.insert(WorldTileMapResource(world_tile_map));
+
 
     Ok(())
 }
