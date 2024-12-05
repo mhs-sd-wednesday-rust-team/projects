@@ -38,12 +38,8 @@ impl PlayerMoveSystem {
             let new_x = (pos.x + delta_x).min(world_tile_map.width as i64).max(0);
             let new_y = (pos.y + delta_y).min(world_tile_map.height as i64).max(0);
 
-            
-            let new_map_idx = WorldTileMap::xy_idx(new_x, new_y);
-
-            // eprintln!("{:?} ({:?}, {:?}) + ({:?}, {:?}) -> ({:?} {:?}) = ({:?})", world_tile_map.board[new_map_idx].kind, pos.x, pos.y, delta_x, delta_y, new_x, new_y, new_map_idx);
-
-            if matches!(world_tile_map.board[new_map_idx].kind, TileKind::Ground){
+            // eprintln!("Now at ({:?}, {:?}) = {:?}", new_x, new_y, world_tile_map.board[new_y as usize][new_x as usize].kind);            
+            if matches!(world_tile_map.board[new_y as usize][new_x as usize].kind, TileKind::Ground){
                 pos.x = new_x;
                 pos.y = new_y;
             }

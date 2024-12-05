@@ -11,7 +11,7 @@ pub mod tile;
 
 #[derive(Default)]
 pub struct WorldTileMap{
-    pub board: Vec<Tile>,
+    pub board: Vec<Vec<Tile>>,
     pub height: usize,
     pub width: usize,
 }
@@ -22,9 +22,10 @@ pub struct WorldTileMapResource(pub WorldTileMap);
 impl WorldTileMap {
 
     fn new_empty(width: usize, height: usize) -> Self {
-        Self { board: Vec::with_capacity(width*height), height: height, width: width }
+        Self { board: vec![vec![Tile { kind: tile::TileKind::Wall, biome: tile::BiomeKind::Castle }; width]; height], height: height, width: width }
     }
 
+    // FIXME: potentially buggy indexing. Check
     pub fn xy_idx(x: i64, y: i64) -> usize {
         (y as usize * BOARD_HEIGHT) + x as usize
     }
@@ -75,7 +76,7 @@ pub fn register(_: &mut DispatcherBuilder, world: &mut World) -> anyhow::Result<
                 .with(tile.clone())
                 .build();
 
-                world_tile_map.board.push(tile);
+            world_tile_map.board[y][x] = tile;
         }
     }
 
