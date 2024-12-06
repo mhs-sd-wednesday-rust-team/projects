@@ -1,3 +1,4 @@
+#[allow(clippy::needless_lifetimes)]
 use flow::{GameFlow, GameState};
 use specs::{DispatcherBuilder, World, WorldExt};
 use std::io::Result;
