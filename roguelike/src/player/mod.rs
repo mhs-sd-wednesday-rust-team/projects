@@ -6,11 +6,11 @@ use ratatui::text::{Span, Text};
 use specs::prelude::*;
 use specs::{Component, DenseVecStorage, DispatcherBuilder, World, WorldExt};
 
-use crate::board::{WorldTileMap, WorldTileMapResource};
 use crate::board::{
     position::Position,
     tile::{Tile, TileKind},
 };
+use crate::board::{WorldTileMap, WorldTileMapResource};
 use crate::term::TermEvents;
 
 #[derive(Component)]
@@ -31,15 +31,18 @@ impl PlayerMoveSystem {
         world_tile_map: &WorldTileMap,
         players: &mut specs::WriteStorage<'a, Player>,
         positions: &mut specs::WriteStorage<'a, Position>,
-        delta_x: i64, 
+        delta_x: i64,
         delta_y: i64,
     ) {
         for (_player, pos) in (players, positions).join() {
             let new_x = (pos.x + delta_x).min(world_tile_map.width as i64).max(0);
             let new_y = (pos.y + delta_y).min(world_tile_map.height as i64).max(0);
 
-            // eprintln!("Now at ({:?}, {:?}) = {:?}", new_x, new_y, world_tile_map.board[new_y as usize][new_x as usize].kind);            
-            if matches!(world_tile_map.board[new_y as usize][new_x as usize].kind, TileKind::Ground){
+            // eprintln!("Now at ({:?}, {:?}) = {:?}", new_x, new_y, world_tile_map.board[new_y as usize][new_x as usize].kind);
+            if matches!(
+                world_tile_map.board[new_y as usize][new_x as usize].kind,
+                TileKind::Ground
+            ) {
                 pos.x = new_x;
                 pos.y = new_y;
             }
@@ -56,16 +59,23 @@ impl<'a> specs::System<'a> for PlayerMoveSystem {
     );
 
     fn run(&mut self, (mut positions, mut players, term_events, world_tile_map): Self::SystemData) {
-        
         let world_map = &world_tile_map.0;
         for event in term_events.0.iter() {
             if let Event::Key(k) = event {
                 if k.kind == KeyEventKind::Press {
                     match k.code {
-                        KeyCode::Up => Self::try_move_player(world_map, &mut players, &mut positions, 0, -1),
-                        KeyCode::Down => Self::try_move_player(world_map, &mut players, &mut positions, 0, 1),
-                        KeyCode::Left => Self::try_move_player(world_map, &mut players, &mut positions, -1, 0),
-                        KeyCode::Right => Self::try_move_player(world_map, &mut players, &mut positions, 1, 0),
+                        KeyCode::Up => {
+                            Self::try_move_player(world_map, &mut players, &mut positions, 0, -1)
+                        }
+                        KeyCode::Down => {
+                            Self::try_move_player(world_map, &mut players, &mut positions, 0, 1)
+                        }
+                        KeyCode::Left => {
+                            Self::try_move_player(world_map, &mut players, &mut positions, -1, 0)
+                        }
+                        KeyCode::Right => {
+                            Self::try_move_player(world_map, &mut players, &mut positions, 1, 0)
+                        }
                         _ => {}
                     }
                 }

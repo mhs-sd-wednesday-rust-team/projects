@@ -41,7 +41,6 @@ fn render_world_tile(tile: &Tile) -> Text {
         .into()
 }
 
-
 fn render_player_tile() -> Text<'static> {
     Span::raw("@")
         .style(Style::default().fg(Color::LightYellow).bg(Color::Black))

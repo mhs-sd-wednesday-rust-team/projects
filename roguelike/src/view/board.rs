@@ -1,13 +1,15 @@
-
 use ratatui::{
     layout::Constraint,
     style::Style,
     widgets::{Cell, Row, Table, Widget},
 };
 
-use crate::{board::{board::Board, position::Position, tile::Tile}, player::Player};
+use crate::{
+    board::{board::Board, position::Position, tile::Tile},
+    player::Player,
+};
 
-use super::{ view_tile::ViewTile};
+use super::view_tile::ViewTile;
 
 pub struct BoardView<'a> {
     pub tiles: &'a [&'a [ViewTile<'a>]],

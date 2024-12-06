@@ -3,7 +3,10 @@ use specs::{DispatcherBuilder, Join, World};
 use view::{GameView, PlayView};
 
 use crate::{
-    board::{board::Board, position::Position, tile::Tile}, player::Player, term::{Term, TermEvents}, view::view_tile::ViewTile
+    board::{board::Board, position::Position, tile::Tile},
+    player::Player,
+    term::{Term, TermEvents},
+    view::view_tile::ViewTile,
 };
 
 pub mod view;
@@ -98,7 +101,10 @@ impl<'a> specs::System<'a> for RenderSystem {
                     GameState::Running => {
                         let board = board.as_slice().iter().next().unwrap();
 
-                        let mut table = vec![vec![ViewTile::WorldTile(&DEFAULT_TILE); board.width]; board.height];
+                        let mut table = vec![
+                            vec![ViewTile::WorldTile(&DEFAULT_TILE); board.width];
+                            board.height
+                        ];
 
                         for (pos, tile) in (&pos, &tile).join() {
                             // FIXME: handle x,y overflow

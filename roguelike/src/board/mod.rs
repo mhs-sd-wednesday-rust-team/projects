@@ -10,7 +10,7 @@ pub mod position;
 pub mod tile;
 
 #[derive(Default)]
-pub struct WorldTileMap{
+pub struct WorldTileMap {
     pub board: Vec<Vec<Tile>>,
     pub height: usize,
     pub width: usize,
@@ -20,9 +20,21 @@ pub struct WorldTileMap{
 pub struct WorldTileMapResource(pub WorldTileMap);
 
 impl WorldTileMap {
-
     fn new_empty(width: usize, height: usize) -> Self {
-        Self { board: vec![vec![Tile { kind: tile::TileKind::Wall, biome: tile::BiomeKind::Castle }; width]; height], height: height, width: width }
+        Self {
+            board: vec![
+                vec![
+                    Tile {
+                        kind: tile::TileKind::Wall,
+                        biome: tile::BiomeKind::Castle
+                    };
+                    width
+                ];
+                height
+            ],
+            height: height,
+            width: width,
+        }
     }
 
     // FIXME: potentially buggy indexing. Check
@@ -81,7 +93,6 @@ pub fn register(_: &mut DispatcherBuilder, world: &mut World) -> anyhow::Result<
     }
 
     world.insert(WorldTileMapResource(world_tile_map));
-
 
     Ok(())
 }
