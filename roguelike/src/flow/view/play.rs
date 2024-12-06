@@ -3,14 +3,11 @@ use ratatui::{
     widgets::{Block, Paragraph, Widget},
 };
 
-use crate::{
-    flow::Level,
-    view::{board::BoardView, view_tile::ViewTile},
-};
+use crate::{board::WorldTileMap, flow::Level, view::board::BoardView};
 
 pub struct PlayView<'a> {
     pub level: &'a Level,
-    pub tiles: &'a [&'a [ViewTile<'a>]],
+    pub map: &'a WorldTileMap,
 }
 
 impl<'a> Widget for PlayView<'a> {
@@ -33,7 +30,7 @@ impl<'a> Widget for PlayView<'a> {
             .constraints(vec![Constraint::Fill(1), Constraint::Length(2)])
             .split(center_area);
 
-        BoardView { tiles: self.tiles }.render(layout[0], buf);
+        BoardView { map: self.map }.render(layout[0], buf);
         Paragraph::new("some hero stats").render(layout[1], buf);
     }
 }

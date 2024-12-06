@@ -1,45 +1,36 @@
-use board::Board;
 use generator::generate_map;
 use position::Position;
-use specs::{Builder, DispatcherBuilder, World, WorldExt};
+use specs::{DispatcherBuilder, World, WorldExt};
 use tile::Tile;
 
-pub mod board;
+use self::tile::Biome;
+
 mod generator;
 pub mod position;
 pub mod tile;
 
-#[derive(Default)]
+#[derive(Clone)]
 pub struct WorldTileMap {
     pub board: Vec<Vec<Tile>>,
+    pub biome: Biome,
     pub height: usize,
     pub width: usize,
 }
 
-#[derive(Default)]
-pub struct WorldTileMapResource(pub WorldTileMap);
-
 impl WorldTileMap {
     fn new_empty(width: usize, height: usize) -> Self {
         Self {
-            board: vec![
-                vec![
-                    Tile {
-                        kind: tile::TileKind::Wall,
-                        biome: tile::BiomeKind::Castle
-                    };
-                    width
-                ];
-                height
-            ],
-            height: height,
-            width: width,
+            board: vec![vec![tile::Tile::Wall; width]; height],
+            biome: tile::Biome::Castle,
+            height,
+            width,
         }
     }
+}
 
-    // FIXME: potentially buggy indexing. Check
-    pub fn xy_idx(x: i64, y: i64) -> usize {
-        (y as usize * BOARD_HEIGHT) + x as usize
+impl Default for WorldTileMap {
+    fn default() -> Self {
+        Self::new_empty(BOARD_WIDTH, BOARD_HEIGHT)
     }
 }
 
@@ -49,50 +40,25 @@ const BOARD_WIDTH: usize = 140;
 pub fn register(_: &mut DispatcherBuilder, world: &mut World) -> anyhow::Result<()> {
     world.register::<Position>();
     world.register::<Tile>();
-    world.register::<Board>();
-
-    // TEST board
-    world
-        .create_entity()
-        .with(Board {
-            width: BOARD_WIDTH,
-            height: BOARD_HEIGHT,
-        })
-        .build();
 
     let map = generate_map();
 
-    let biome = tile::BiomeKind::Castle;
-
     let mut world_tile_map = WorldTileMap::new_empty(BOARD_WIDTH, BOARD_HEIGHT);
+    world_tile_map.biome = tile::Biome::Castle;
 
     for y in 0..BOARD_HEIGHT {
         for x in 0..BOARD_WIDTH {
-            let tile_kind = if map.is_walkable(x, y) {
-                tile::TileKind::Ground
+            let tile = if map.is_walkable(x, y) {
+                tile::Tile::Ground
             } else {
-                tile::TileKind::Wall
+                tile::Tile::Wall
             };
-
-            let tile = Tile {
-                biome: biome.clone(),
-                kind: tile_kind,
-            };
-
-            world
-                .create_entity()
-                .with(Position {
-                    x: x as i64,
-                    y: y as i64,
-                })
-                .with(tile.clone())
-                .build();
 
             world_tile_map.board[y][x] = tile;
         }
     }
 
-    world.insert(WorldTileMapResource(world_tile_map));
+    world.insert(world_tile_map);
 
     Ok(())
 }

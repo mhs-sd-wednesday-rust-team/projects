@@ -1,7 +1,4 @@
-use mapgen::{
-    AreaStartingPosition, BspInterior, BspRooms, CellularAutomata, MapBuffer, MapBuilder,
-    MazeBuilder, NearestCorridors, NoiseGenerator, VoronoiHive,
-};
+use mapgen::{AreaStartingPosition, BspRooms, MapBuffer, MapBuilder, NearestCorridors};
 
 pub fn generate_map() -> MapBuffer {
     MapBuilder::new(140, 60)

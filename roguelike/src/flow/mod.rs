@@ -3,10 +3,8 @@ use specs::{DispatcherBuilder, Join, World};
 use view::{GameView, PlayView};
 
 use crate::{
-    board::{board::Board, position::Position, tile::Tile},
-    player::Player,
+    board::{position::Position, tile::Tile, WorldTileMap},
     term::{Term, TermEvents},
-    view::view_tile::ViewTile,
 };
 
 pub mod view;
@@ -75,19 +73,12 @@ impl<'a> specs::System<'a> for RenderSystem {
     type SystemData = (
         specs::Write<'a, Term>,
         specs::Read<'a, GameFlow>,
-        specs::ReadStorage<'a, Board>,
+        specs::Read<'a, WorldTileMap>,
         specs::ReadStorage<'a, Position>,
         specs::ReadStorage<'a, Tile>,
-        specs::ReadStorage<'a, Player>,
     );
 
-    fn run(&mut self, (mut term, game_flow, board, pos, tile, player): Self::SystemData) {
-        // FIXME: better default tile
-        static DEFAULT_TILE: Tile = Tile {
-            kind: crate::board::tile::TileKind::Ground,
-            biome: crate::board::tile::BiomeKind::Beach,
-        };
-
+    fn run(&mut self, (mut term, game_flow, map, pos, tile): Self::SystemData) {
         term.0
             .draw(|frame| {
                 let area = frame.area();
@@ -99,38 +90,21 @@ impl<'a> specs::System<'a> for RenderSystem {
                         frame.render_widget(GameView::Finish(view::FinishMenuView), area)
                     }
                     GameState::Running => {
-                        let board = board.as_slice().iter().next().unwrap();
-
-                        let mut table = vec![
-                            vec![ViewTile::WorldTile(&DEFAULT_TILE); board.width];
-                            board.height
-                        ];
+                        // CoW
+                        let mut map = map.clone();
 
                         for (pos, tile) in (&pos, &tile).join() {
                             // FIXME: handle x,y overflow
-                            *table
+                            *map.board
                                 .get_mut(pos.y as usize)
                                 .unwrap()
                                 .get_mut(pos.x as usize)
-                                .unwrap() = ViewTile::WorldTile(tile);
-                        }
-
-                        for (pos, _) in (&pos, &player).join() {
-                            // FIXME: handle x,y overflow
-                            *table
-                                .get_mut(pos.y as usize)
-                                .unwrap()
-                                .get_mut(pos.x as usize)
-                                .unwrap() = ViewTile::PlayerTile;
+                                .unwrap() = tile.clone();
                         }
 
                         frame.render_widget(
                             GameView::Play(PlayView {
-                                tiles: table
-                                    .iter()
-                                    .map(|r| r.as_slice())
-                                    .collect::<Vec<_>>()
-                                    .as_slice(),
+                                map: &map,
                                 level: &game_flow.level,
                             }),
                             area,

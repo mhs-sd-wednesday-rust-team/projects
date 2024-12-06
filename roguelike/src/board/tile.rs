@@ -1,20 +1,15 @@
 use specs::{Component, DenseVecStorage};
 
-#[derive(Clone, Debug)]
-pub enum TileKind {
+#[derive(Component, Clone, Debug)]
+pub enum Tile {
     Ground,
     Wall,
+    Player,
 }
 
 #[derive(Clone)]
-pub enum BiomeKind {
+pub enum Biome {
     Beach,
     Ocean,
     Castle,
-}
-
-#[derive(Component, Clone)]
-pub struct Tile {
-    pub kind: TileKind,
-    pub biome: BiomeKind,
 }

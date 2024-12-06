@@ -1,28 +1,15 @@
 use anyhow::anyhow;
 use crossterm::event::{Event, KeyCode, KeyEventKind};
 use rand::seq::IteratorRandom;
-use ratatui::style::{Color, Style};
-use ratatui::text::{Span, Text};
 use specs::prelude::*;
 use specs::{Component, DenseVecStorage, DispatcherBuilder, World, WorldExt};
 
-use crate::board::{
-    position::Position,
-    tile::{Tile, TileKind},
-};
-use crate::board::{WorldTileMap, WorldTileMapResource};
+use crate::board::WorldTileMap;
+use crate::board::{position::Position, tile::Tile};
 use crate::term::TermEvents;
 
 #[derive(Component)]
 pub struct Player {}
-
-impl<'a> From<Player> for Text<'a> {
-    fn from(_player: Player) -> Self {
-        Span::raw("@")
-            .style(Style::default().fg(Color::Yellow).bg(Color::Black))
-            .into()
-    }
-}
 
 struct PlayerMoveSystem;
 
@@ -40,8 +27,8 @@ impl PlayerMoveSystem {
 
             // eprintln!("Now at ({:?}, {:?}) = {:?}", new_x, new_y, world_tile_map.board[new_y as usize][new_x as usize].kind);
             if matches!(
-                world_tile_map.board[new_y as usize][new_x as usize].kind,
-                TileKind::Ground
+                world_tile_map.board[new_y as usize][new_x as usize],
+                Tile::Ground
             ) {
                 pos.x = new_x;
                 pos.y = new_y;
@@ -55,11 +42,11 @@ impl<'a> specs::System<'a> for PlayerMoveSystem {
         specs::WriteStorage<'a, Position>,
         specs::WriteStorage<'a, Player>,
         specs::Read<'a, TermEvents>,
-        specs::Read<'a, WorldTileMapResource>,
+        specs::Read<'a, WorldTileMap>,
     );
 
     fn run(&mut self, (mut positions, mut players, term_events, world_tile_map): Self::SystemData) {
-        let world_map = &world_tile_map.0;
+        let world_map = &world_tile_map;
         for event in term_events.0.iter() {
             if let Event::Key(k) = event {
                 if k.kind == KeyEventKind::Press {
@@ -89,24 +76,26 @@ pub fn register(dispatcher: &mut DispatcherBuilder, world: &mut World) -> anyhow
 
     let mut rng = rand::thread_rng();
 
-    let player_spawn_position: Position;
-    {
-        let tiles = world.read_storage::<Tile>();
-        let positions = world.read_storage::<Position>();
+    let player_spawn_position = {
+        let map = world.read_resource::<WorldTileMap>();
 
-        let positioned_ground_tiles = (&positions, &tiles)
-            .join()
-            .filter(|(&ref _pos, &ref tile)| matches!(tile.kind, TileKind::Ground))
+        let spawn_position = (0..map.height)
+            .zip(0..map.width)
+            .filter(|&pos| matches!(map.board[pos.0][pos.1], Tile::Ground))
             .choose(&mut rng)
             .ok_or(anyhow!("Did not find any ground tile to spawn player"))?;
 
-        player_spawn_position = positioned_ground_tiles.0.clone();
-    }
+        Position {
+            x: spawn_position.1 as i64,
+            y: spawn_position.0 as i64,
+        }
+    };
 
     world
         .create_entity()
-        .with(player_spawn_position.clone())
+        .with(player_spawn_position)
         .with(Player {})
+        .with(Tile::Player)
         .build();
 
     dispatcher.add(PlayerMoveSystem, "player_move_system", &[]);

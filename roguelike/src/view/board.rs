@@ -4,15 +4,12 @@ use ratatui::{
     widgets::{Cell, Row, Table, Widget},
 };
 
-use crate::{
-    board::{board::Board, position::Position, tile::Tile},
-    player::Player,
-};
+use crate::board::WorldTileMap;
 
 use super::view_tile::ViewTile;
 
 pub struct BoardView<'a> {
-    pub tiles: &'a [&'a [ViewTile<'a>]],
+    pub map: &'a WorldTileMap,
 }
 
 impl<'a> Widget for BoardView<'a> {
@@ -21,15 +18,18 @@ impl<'a> Widget for BoardView<'a> {
         Self: Sized,
     {
         let mut rows = vec![];
-        for table_row in self.tiles.iter() {
+        for board_row in self.map.board.iter() {
             let mut cells = vec![];
-            for table_cell in table_row.iter() {
-                cells.push(Cell::new(table_cell.clone().clone()));
+            for board_cell in board_row.iter() {
+                cells.push(Cell::new(ViewTile {
+                    tile: board_cell,
+                    biome: &self.map.biome,
+                }));
             }
             rows.push(Row::new(cells));
         }
 
-        let widths = vec![Constraint::Length(1); self.tiles[0].len()];
+        let widths = vec![Constraint::Length(1); self.map.width];
 
         Table::new(rows, widths)
             .style(
