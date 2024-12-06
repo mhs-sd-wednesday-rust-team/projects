@@ -1,0 +1,9 @@
+[workspace]
+members = ["shell", "roguelike"]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+version = "0.0.1"
+authors = ["who <who@gmail.com>"]
+license = "MIT"
