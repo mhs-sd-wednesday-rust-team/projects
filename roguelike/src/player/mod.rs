@@ -24,10 +24,17 @@ impl PlayerMoveSystem {
         delta_y: i64,
     ) {
         for (_player, pos) in (players, positions).join() {
-            let new_x = (pos.x + delta_x).min(world_tile_map.width as i64).max(0);
-            let new_y = (pos.y + delta_y).min(world_tile_map.height as i64).max(0);
+            let new_x = pos.x + delta_x;
+            let new_y = pos.y + delta_y;
 
-            // eprintln!("Now at ({:?}, {:?}) = {:?}", new_x, new_y, world_tile_map.board[new_y as usize][new_x as usize].kind);
+            if !(0 <= new_x && new_x < world_tile_map.width as i64) {
+                continue;
+            }
+
+            if !(0 <= new_y && new_y < world_tile_map.height as i64) {
+                continue;
+            }
+
             if matches!(
                 world_tile_map.board[new_y as usize][new_x as usize],
                 Tile::Ground
@@ -101,4 +108,71 @@ pub fn register(dispatcher: &mut DispatcherBuilder, world: &mut World) -> anyhow
 
     dispatcher.add(PlayerMoveSystem, "player_move_system", &[]);
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::board::tile::Biome;
+
+    use super::*;
+
+    #[test]
+    fn test_player_move() {
+        let map_repr = vec!["###", "#..", "#.."];
+
+        let map_board: Vec<Vec<Tile>> = map_repr
+            .into_iter()
+            .map(|row_repr| {
+                let mut row = vec![];
+                for ch in row_repr.chars() {
+                    row.push(match ch {
+                        '#' => Tile::Wall,
+                        '.' => Tile::Ground,
+                        _ => panic!("Unknown map tile"),
+                    });
+                }
+                row
+            })
+            .collect();
+
+        let map_height = map_board.len();
+        let map_width = map_board[0].len();
+        let map = WorldTileMap {
+            board: map_board,
+            biome: Biome::Castle,
+            height: map_height,
+            width: map_width,
+        };
+
+        let test_cases = vec![
+            ((0, 0), (1, 1)),
+            ((0, 1), (1, 2)),
+            ((1, 0), (2, 1)),
+            ((1, 1), (2, 2)),
+            ((-1, 0), (1, 1)),
+            ((100, 100), (1, 1)),
+        ];
+
+        for ((dx, dy), expected_pos) in test_cases {
+            let mut world = World::new();
+            world.register::<Player>();
+            world.register::<Position>();
+
+            world
+                .create_entity()
+                .with(Position { x: 1, y: 1 })
+                .with(Player {})
+                .build();
+
+            let players = &mut world.write_component::<Player>();
+            let positions = &mut world.write_component::<Position>();
+
+            PlayerMoveSystem::try_move_player(&map, players, positions, dx, dy);
+
+            for (_player, pos) in (players, positions).join() {
+                let actual_pos = (pos.x, pos.y);
+                assert_eq!(expected_pos, actual_pos, "Move with delta ({}, {}) failed. Expected to get to ({}, {}), but got to ({}, {})",  dx, dy, expected_pos.0, expected_pos.1, actual_pos.0, actual_pos.1);
+            }
+        }
+    }
 }
