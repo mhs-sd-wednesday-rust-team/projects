@@ -8,6 +8,7 @@ use self::tile::Biome;
 mod generator;
 pub mod position;
 pub mod tile;
+pub mod view;
 
 #[derive(Clone)]
 pub struct WorldTileMap {
@@ -39,7 +40,6 @@ const BOARD_WIDTH: usize = 140;
 
 pub fn register(_: &mut DispatcherBuilder, world: &mut World) -> anyhow::Result<()> {
     world.register::<Position>();
-    world.register::<Tile>();
 
     let map = generate_map();
 

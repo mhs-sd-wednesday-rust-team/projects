@@ -4,12 +4,16 @@ use ratatui::{
     widgets::{Cell, Row, Table, Widget},
 };
 
-use crate::board::WorldTileMap;
+use crate::{
+    board::{position::Position, WorldTileMap},
+    player::view::player::PlayerView,
+};
 
-use super::view_tile::ViewTile;
+use super::view_tile::WorldTile;
 
 pub struct BoardView<'a> {
     pub map: &'a WorldTileMap,
+    pub player_pos: &'a Position,
 }
 
 impl<'a> Widget for BoardView<'a> {
@@ -18,13 +22,19 @@ impl<'a> Widget for BoardView<'a> {
         Self: Sized,
     {
         let mut rows = vec![];
-        for board_row in self.map.board.iter() {
+        for (y, board_row) in self.map.board.iter().enumerate() {
             let mut cells = vec![];
-            for board_cell in board_row.iter() {
-                cells.push(Cell::new(ViewTile {
-                    tile: board_cell,
-                    biome: &self.map.biome,
-                }));
+            for (x, board_cell) in board_row.iter().enumerate() {
+                if self.player_pos.x == x as i64 && self.player_pos.y == y as i64 {
+                    cells.push(Cell::new(PlayerView {
+                        tag: Default::default(),
+                    }));
+                } else {
+                    cells.push(Cell::new(WorldTile {
+                        tile: board_cell,
+                        biome: &self.map.biome,
+                    }));
+                };
             }
             rows.push(Row::new(cells));
         }

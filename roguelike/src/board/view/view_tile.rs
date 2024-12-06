@@ -5,16 +5,18 @@ use ratatui::{
 
 use crate::board::tile::{Biome, Tile};
 
+#[allow(unused)]
+pub trait TileView<'a>: Into<Text<'a>> {}
+
 #[derive(Clone)]
-pub struct ViewTile<'a> {
+pub struct WorldTile<'a> {
     pub tile: &'a Tile,
     pub biome: &'a Biome,
 }
 
-impl<'a> From<ViewTile<'a>> for Text<'a> {
-    fn from(value: ViewTile<'a>) -> Self {
+impl<'a> From<WorldTile<'a>> for Text<'a> {
+    fn from(value: WorldTile<'a>) -> Self {
         let (glyph, bg, fg) = match value.tile {
-            Tile::Player => ("@", Color::LightYellow, Color::Black),
             Tile::Wall => match value.biome {
                 Biome::Ocean => ("@", Color::LightBlue, Color::Red),
                 Biome::Beach => ("$", Color::LightYellow, Color::Black),
@@ -32,3 +34,5 @@ impl<'a> From<ViewTile<'a>> for Text<'a> {
             .into()
     }
 }
+
+impl<'a, T> TileView<'a> for T where T: Into<Text<'a>> {}

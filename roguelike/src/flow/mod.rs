@@ -1,11 +1,7 @@
 use crossterm::event::{self, KeyCode, KeyEventKind};
-use specs::{DispatcherBuilder, Join, World};
-use view::{GameView, PlayView};
+use specs::{DispatcherBuilder, World};
 
-use crate::{
-    board::{position::Position, tile::Tile, WorldTileMap},
-    term::{Term, TermEvents},
-};
+use crate::term::TermEvents;
 
 pub mod view;
 
@@ -67,60 +63,8 @@ impl<'a> specs::System<'a> for DummyFlowSystem {
     }
 }
 
-struct RenderSystem;
-
-impl<'a> specs::System<'a> for RenderSystem {
-    type SystemData = (
-        specs::Write<'a, Term>,
-        specs::Read<'a, GameFlow>,
-        specs::Read<'a, WorldTileMap>,
-        specs::ReadStorage<'a, Position>,
-        specs::ReadStorage<'a, Tile>,
-    );
-
-    fn run(&mut self, (mut term, game_flow, map, pos, tile): Self::SystemData) {
-        term.0
-            .draw(|frame| {
-                let area = frame.area();
-                match game_flow.state {
-                    GameState::Start => {
-                        frame.render_widget(GameView::Start(view::StartMenuView), area)
-                    }
-                    GameState::Finished => {
-                        frame.render_widget(GameView::Finish(view::FinishMenuView), area)
-                    }
-                    GameState::Running => {
-                        // CoW
-                        let mut map = map.clone();
-
-                        for (pos, tile) in (&pos, &tile).join() {
-                            // FIXME: handle x,y overflow
-                            *map.board
-                                .get_mut(pos.y as usize)
-                                .unwrap()
-                                .get_mut(pos.x as usize)
-                                .unwrap() = tile.clone();
-                        }
-
-                        frame.render_widget(
-                            GameView::Play(PlayView {
-                                map: &map,
-                                level: &game_flow.level,
-                            }),
-                            area,
-                        )
-                    }
-                    GameState::Exit => {}
-                };
-            })
-            .unwrap();
-    }
-}
-
 pub fn register(dispatcher: &mut DispatcherBuilder, world: &mut World) -> anyhow::Result<()> {
     world.insert(GameFlow::default());
-
-    dispatcher.add_thread_local(RenderSystem);
 
     dispatcher.add(DummyFlowSystem, "dummy_flow", &[]);
 

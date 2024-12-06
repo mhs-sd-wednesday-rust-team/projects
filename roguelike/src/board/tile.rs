@@ -1,10 +1,7 @@
-use specs::{Component, DenseVecStorage};
-
-#[derive(Component, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub enum Tile {
     Ground,
     Wall,
-    Player,
 }
 
 #[derive(Clone)]

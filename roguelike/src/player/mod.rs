@@ -8,6 +8,8 @@ use crate::board::WorldTileMap;
 use crate::board::{position::Position, tile::Tile};
 use crate::term::TermEvents;
 
+pub mod view;
+
 #[derive(Component)]
 pub struct Player {}
 
@@ -95,7 +97,6 @@ pub fn register(dispatcher: &mut DispatcherBuilder, world: &mut World) -> anyhow
         .create_entity()
         .with(player_spawn_position)
         .with(Player {})
-        .with(Tile::Player)
         .build();
 
     dispatcher.add(PlayerMoveSystem, "player_move_system", &[]);
