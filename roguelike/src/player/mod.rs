@@ -4,8 +4,8 @@ use rand::seq::IteratorRandom;
 use specs::prelude::*;
 use specs::{Component, DenseVecStorage, DispatcherBuilder, World, WorldExt};
 
-use crate::board::WorldTileMap;
 use crate::board::{position::Position, tile::Tile};
+use crate::board::WorldTileMap;
 use crate::term::TermEvents;
 
 pub mod view;
@@ -80,24 +80,28 @@ impl<'a> specs::System<'a> for PlayerMoveSystem {
     }
 }
 
+pub fn find_player_spawn_position(map: &WorldTileMap) -> anyhow::Result<Position> {
+    let mut rng = rand::thread_rng();
+
+    let spawn_position = (0..map.height)
+        .zip(0..map.width)
+        .filter(|&pos| matches!(map.board[pos.0][pos.1], Tile::Ground))
+        .choose(&mut rng)
+        .ok_or(anyhow!("Did not find any ground tile to spawn player"))?;
+
+    let pos = Position {
+        x: spawn_position.1 as i64,
+        y: spawn_position.0 as i64,
+    };
+    Ok(pos)
+}
+
 pub fn register(dispatcher: &mut DispatcherBuilder, world: &mut World) -> anyhow::Result<()> {
     world.register::<Player>();
 
-    let mut rng = rand::thread_rng();
-
     let player_spawn_position = {
-        let map = world.read_resource::<WorldTileMap>();
-
-        let spawn_position = (0..map.height)
-            .zip(0..map.width)
-            .filter(|&pos| matches!(map.board[pos.0][pos.1], Tile::Ground))
-            .choose(&mut rng)
-            .ok_or(anyhow!("Did not find any ground tile to spawn player"))?;
-
-        Position {
-            x: spawn_position.1 as i64,
-            y: spawn_position.0 as i64,
-        }
+        let tile_map = world.read_resource::<WorldTileMap>();
+        find_player_spawn_position(&tile_map)?
     };
 
     world
