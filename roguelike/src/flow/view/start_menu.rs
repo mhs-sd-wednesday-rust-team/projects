@@ -34,7 +34,7 @@ impl Widget for StartMenuView {
             .build()
             .render(layout[1], buf);
 
-        Paragraph::new("Press any character to start")
+        Paragraph::new("Press any character to start. Press 'q' to quit.")
             .centered()
             .render(layout[2], buf);
     }

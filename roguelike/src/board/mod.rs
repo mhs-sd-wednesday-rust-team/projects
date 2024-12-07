@@ -38,9 +38,7 @@ impl Default for WorldTileMap {
 const BOARD_HEIGHT: usize = 60;
 const BOARD_WIDTH: usize = 140;
 
-pub fn register(_: &mut DispatcherBuilder, world: &mut World) -> anyhow::Result<()> {
-    world.register::<Position>();
-
+fn generate_random_world_tile_map(world: &mut World) -> WorldTileMap {
     let map = generate_map();
 
     let mut world_tile_map = WorldTileMap::new_empty(BOARD_WIDTH, BOARD_HEIGHT);
@@ -57,8 +55,25 @@ pub fn register(_: &mut DispatcherBuilder, world: &mut World) -> anyhow::Result<
             world_tile_map.board[y][x] = tile;
         }
     }
+    world_tile_map
+}
 
-    world.insert(world_tile_map);
+pub fn register(_: &mut DispatcherBuilder, world: &mut World) -> anyhow::Result<()> {
+    world.register::<Position>();
+    world.register::<Tile>();
+    world.register::<Board>();
+
+    // TEST board
+    world
+        .create_entity()
+        .with(Board {
+            width: BOARD_WIDTH,
+            height: BOARD_HEIGHT,
+        })
+        .build();
+
+    let world_tile_map = generate_random_world_tile_map(world);
+    world.insert(WorldTileMapResource(world_tile_map));
 
     Ok(())
 }

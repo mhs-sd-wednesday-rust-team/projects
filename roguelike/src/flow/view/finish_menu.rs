@@ -34,7 +34,7 @@ impl Widget for FinishMenuView {
             .build()
             .render(layout[1], buf);
 
-        Paragraph::new("Press any character to restart")
+        Paragraph::new("Press any character to restart. Press 'q' to quit.")
             .centered()
             .render(layout[2], buf);
     }
