@@ -4,8 +4,8 @@ use rand::seq::IteratorRandom;
 use specs::prelude::*;
 use specs::{Component, DenseVecStorage, DispatcherBuilder, World, WorldExt};
 
-use crate::board::{position::Position, tile::Tile};
 use crate::board::WorldTileMap;
+use crate::board::{position::Position, tile::Tile};
 use crate::term::TermEvents;
 
 pub mod view;
