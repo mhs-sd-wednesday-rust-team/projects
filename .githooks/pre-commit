@@ -10,7 +10,7 @@ EOF
     exit 1
 fi
 
-diff=$(cargo clippy --all-features --all-targets)
+diff=$(RUSTFLAGS=-Dwarnings cargo clippy --all-features --all-targets)
 result=$?
 
 if [[ ${result} -ne 0 ]] ; then
