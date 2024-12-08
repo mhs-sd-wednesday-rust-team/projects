@@ -60,16 +60,16 @@ impl<'a> specs::System<'a> for PlayerMoveSystem {
             if let Event::Key(k) = event {
                 if k.kind == KeyEventKind::Press {
                     match k.code {
-                        KeyCode::Up => {
+                        KeyCode::Up | KeyCode::Char('k') => {
                             Self::try_move_player(world_map, &mut players, &mut positions, 0, -1)
                         }
-                        KeyCode::Down => {
+                        KeyCode::Down | KeyCode::Char('j') => {
                             Self::try_move_player(world_map, &mut players, &mut positions, 0, 1)
                         }
-                        KeyCode::Left => {
+                        KeyCode::Left | KeyCode::Char('h') => {
                             Self::try_move_player(world_map, &mut players, &mut positions, -1, 0)
                         }
-                        KeyCode::Right => {
+                        KeyCode::Right | KeyCode::Char('l') => {
                             Self::try_move_player(world_map, &mut players, &mut positions, 1, 0)
                         }
                         _ => {}

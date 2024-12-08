@@ -39,6 +39,7 @@ impl<'a> Widget for PlayView<'a> {
             player_pos: self.player,
         }
         .render(layout[0], buf);
-        Paragraph::new("some hero stats").render(layout[1], buf);
+        Paragraph::new("move with `arrows` or (`h`,`j`,`k`,`l`); simulate death with `d`")
+            .render(layout[1], buf);
     }
 }
