@@ -27,13 +27,18 @@ impl BuiltinCommand for CatCommand {
         stdout: &mut dyn Write,
     ) -> Result<(), Box<dyn Error + Sync + Send>> {
         let args = Args::try_parse_from(args.into_iter())?;
-        let file = match args.file.as_deref() {
-            Some("-") | None => stdin,
-            Some(path) => &mut File::open(path)?,
-        };
 
         let mut buf = String::default();
-        file.read_to_string(&mut buf)?;
+
+        match args.file.as_deref() {
+            Some("-") | None => {
+                stdin.read_to_string(&mut buf)?;
+            }
+            Some(path) => {
+                let mut file = File::open(path)?;
+                file.read_to_string(&mut buf)?;
+            }
+        };
 
         write!(stdout, "{}", buf)?;
         Ok(())

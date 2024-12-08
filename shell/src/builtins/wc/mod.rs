@@ -91,9 +91,15 @@ impl BuiltinCommand for WcCommand {
         }
 
         for path in args.file.as_slice() {
+            let mut _file_binding = Option::<File>::None;
+
             let file = match path.as_str() {
                 "-" => &mut *stdin,
-                path => &mut File::open(path)?,
+                path => {
+                    let f = File::open(path)?;
+                    _file_binding = Some(f);
+                    _file_binding.as_mut().unwrap()
+                }
             };
             let mut buf = BufReader::new(file);
 

@@ -17,9 +17,6 @@ jobs:
   fmt:
     runs-on: ubuntu-latest
     name: stable / fmt
-    defaults:
-      run:
-        working-directory: ./shell
     steps:
       - uses: actions/checkout@v4
       - name: Install stable
@@ -34,9 +31,6 @@ jobs:
     permissions:
       contents: read
       checks: write
-    defaults:
-      run:
-        working-directory: ./shell
     steps:
       - uses: actions/checkout@v4
         with:

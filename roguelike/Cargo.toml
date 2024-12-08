@@ -1,0 +1,14 @@
+[package]
+name = "crab_knight"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.93"
+crossterm = "0.28.1"
+mapgen = "0.6.0"
+rand = "0.8.5"
+ratatui = "0.29.0"
+rayon = "1.10.0"
+specs = { version = "0.20.0", features = ["derive", "specs-derive"] }
+tui-big-text = "0.7.0"
