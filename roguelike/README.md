@@ -5,3 +5,22 @@
 ## Что?
 
 Подробности игры можно узнать в [документации](./docs/)
+
+## Как запустить?
+
+### Из исходников
+
+```
+git clone git@github.com:mhs-sd-wednesday-rust-team/projects.git
+git checkout $TASK_BRANCH
+cd roguelike
+cargo run --release
+```
+
+### Установить с помощью cargo
+
+```
+cargo install --git https://github.com/mhs-sd-wednesday-rust-team/projects roguelike --branch $TASK_BRANCH
+
+$CARGO_HOME/bin/crab_knight
+```
