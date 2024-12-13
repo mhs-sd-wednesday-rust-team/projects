@@ -6,6 +6,8 @@ use specs::{Component, DenseVecStorage, DispatcherBuilder, World, WorldExt};
 
 use crate::board::WorldTileMap;
 use crate::board::{position::Position, tile::Tile};
+use crate::flow::{GameFlow, GameState};
+use crate::monster::Monster;
 use crate::term::TermEvents;
 
 pub mod view;
@@ -18,31 +20,44 @@ struct PlayerMoveSystem;
 impl PlayerMoveSystem {
     fn try_move_player<'a>(
         world_tile_map: &WorldTileMap,
-        players: &mut specs::WriteStorage<'a, Player>,
-        positions: &mut specs::WriteStorage<'a, Position>,
+        players: &WriteStorage<'a, Player>,
+        monsters: &WriteStorage<'a, Monster>,
+        positions: &mut WriteStorage<'a, Position>,
         delta_x: i64,
         delta_y: i64,
-    ) {
-        for (_player, pos) in (players, positions).join() {
-            let new_x = pos.x + delta_x;
-            let new_y = pos.y + delta_y;
-
-            if !(0 <= new_x && new_x < world_tile_map.width as i64) {
-                continue;
+    ) -> bool {
+        let new_pos = {
+            let (_, pos) = (players, positions as &WriteStorage<'a, Position>)
+                .join()
+                .next()
+                .expect("Player entity must exist");
+            Position {
+                x: pos.x + delta_x,
+                y: pos.y + delta_y,
             }
+        };
 
-            if !(0 <= new_y && new_y < world_tile_map.height as i64) {
+        let monsters_collision = (monsters, positions as &WriteStorage<'a, Position>)
+            .join()
+            .any(|(_, pos)| pos.x == new_pos.x && pos.y == new_pos.y);
+
+        for (_, pos) in (players, positions).join() {
+            let out_of_width = !(0 <= new_pos.x && new_pos.x < world_tile_map.width as i64);
+            let out_of_height = !(0 <= new_pos.y && new_pos.y < world_tile_map.height as i64);
+            if out_of_width || out_of_height || monsters_collision {
                 continue;
             }
 
             if matches!(
-                world_tile_map.board[new_y as usize][new_x as usize],
+                world_tile_map.board[new_pos.y as usize][new_pos.x as usize],
                 Tile::Ground
             ) {
-                pos.x = new_x;
-                pos.y = new_y;
+                pos.x = new_pos.x;
+                pos.y = new_pos.y;
+                return true;
             }
         }
+        false
     }
 }
 
@@ -50,29 +65,48 @@ impl<'a> specs::System<'a> for PlayerMoveSystem {
     type SystemData = (
         specs::WriteStorage<'a, Position>,
         specs::WriteStorage<'a, Player>,
+        specs::WriteStorage<'a, Monster>,
         specs::Read<'a, TermEvents>,
         specs::Read<'a, WorldTileMap>,
+        specs::Write<'a, GameFlow>,
     );
 
-    fn run(&mut self, (mut positions, mut players, term_events, world_tile_map): Self::SystemData) {
+    fn run(
+        &mut self,
+        (
+            mut positions,
+            players,
+            monsters,
+            term_events,
+            world_tile_map,
+            mut game_flow
+        ): Self::SystemData,
+    ) {
         let world_map = &world_tile_map;
         for event in term_events.0.iter() {
             if let Event::Key(k) = event {
                 if k.kind == KeyEventKind::Press {
-                    match k.code {
-                        KeyCode::Up | KeyCode::Char('k') => {
-                            Self::try_move_player(world_map, &mut players, &mut positions, 0, -1)
+                    let deltas = match k.code {
+                        KeyCode::Up | KeyCode::Char('k') => Some((0, -1)),
+                        KeyCode::Down | KeyCode::Char('j') => Some((0, 1)),
+                        KeyCode::Left | KeyCode::Char('h') => Some((-1, 0)),
+                        KeyCode::Right | KeyCode::Char('l') => Some((1, 0)),
+                        _ => None,
+                    };
+
+                    if let Some((delta_x, delta_y)) = deltas {
+                        let moved = Self::try_move_player(
+                            world_map,
+                            &players,
+                            &monsters,
+                            &mut positions,
+                            delta_x,
+                            delta_y,
+                        );
+                        if moved {
+                            game_flow.state =
+                                GameState::Running(crate::flow::RunningState::MobsTurn)
                         }
-                        KeyCode::Down | KeyCode::Char('j') => {
-                            Self::try_move_player(world_map, &mut players, &mut positions, 0, 1)
-                        }
-                        KeyCode::Left | KeyCode::Char('h') => {
-                            Self::try_move_player(world_map, &mut players, &mut positions, -1, 0)
-                        }
-                        KeyCode::Right | KeyCode::Char('l') => {
-                            Self::try_move_player(world_map, &mut players, &mut positions, 1, 0)
-                        }
-                        _ => {}
                     }
                 }
             }
@@ -80,7 +114,7 @@ impl<'a> specs::System<'a> for PlayerMoveSystem {
     }
 }
 
-pub fn find_player_spawn_position(map: &WorldTileMap) -> anyhow::Result<Position> {
+pub fn find_creature_spawn_position(map: &WorldTileMap) -> anyhow::Result<Position> {
     let mut rng = rand::thread_rng();
 
     let spawn_position = (0..map.height)
@@ -101,7 +135,7 @@ pub fn register(dispatcher: &mut DispatcherBuilder, world: &mut World) -> anyhow
 
     let player_spawn_position = {
         let tile_map = world.read_resource::<WorldTileMap>();
-        find_player_spawn_position(&tile_map)?
+        find_creature_spawn_position(&tile_map)?
     };
 
     world
@@ -169,9 +203,10 @@ mod tests {
                 .build();
 
             let players = &mut world.write_component::<Player>();
+            let monsters = &mut world.write_component::<Monster>();
             let positions = &mut world.write_component::<Position>();
 
-            PlayerMoveSystem::try_move_player(&map, players, positions, dx, dy);
+            PlayerMoveSystem::try_move_player(&map, players, monsters, positions, dx, dy);
 
             for (_player, pos) in (players, positions).join() {
                 let actual_pos = (pos.x, pos.y);

@@ -2,7 +2,7 @@ use crossterm::event::{self, KeyCode};
 use specs::prelude::*;
 use specs::{DispatcherBuilder, World};
 
-use crate::player::find_player_spawn_position;
+use crate::player::find_creature_spawn_position;
 use crate::{
     board::{generator::generate_map, position::Position, WorldTileMap},
     player::Player,
@@ -12,9 +12,15 @@ use crate::{
 pub mod view;
 
 #[derive(PartialEq, Eq)]
+pub enum RunningState {
+    PlayerTurn,
+    MobsTurn,
+}
+
+#[derive(PartialEq, Eq)]
 pub enum GameState {
     Start,
-    Running,
+    Running(RunningState),
     Finished,
     Exit,
 }
@@ -74,8 +80,10 @@ impl<'a> specs::System<'a> for DummyFlowSystem {
                 }
 
                 match game_flow.state {
-                    GameState::Start => game_flow.state = GameState::Running,
-                    GameState::Running => {
+                    GameState::Start => {
+                        game_flow.state = GameState::Running(RunningState::PlayerTurn)
+                    }
+                    GameState::Running(_) => {
                         // FIXME: mock switch to "death".
                         if k.code == KeyCode::Char('d') {
                             game_flow.state = GameState::Finished;
@@ -86,12 +94,12 @@ impl<'a> specs::System<'a> for DummyFlowSystem {
                         tile_map.set_map(&map);
 
                         for (_, pos) in (&players, &mut positions).join() {
-                            *pos = find_player_spawn_position(&tile_map)
+                            *pos = find_creature_spawn_position(&tile_map)
                                 .unwrap_or_else(|e| panic!("{e:?}"));
                         }
                         // TODO: Should also reinitialize stats and update monsters.
 
-                        game_flow.state = GameState::Running
+                        game_flow.state = GameState::Running(RunningState::PlayerTurn)
                     }
                     GameState::Exit => {}
                 }
@@ -103,7 +111,7 @@ impl<'a> specs::System<'a> for DummyFlowSystem {
 pub fn register(dispatcher: &mut DispatcherBuilder, world: &mut World) -> anyhow::Result<()> {
     world.insert(GameFlow::default());
 
-    dispatcher.add(DummyFlowSystem, "dummy_flow", &[]);
+    dispatcher.add(DummyFlowSystem, "dummy_flow", &["monster_system"]);
 
     Ok(())
 }
