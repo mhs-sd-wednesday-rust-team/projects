@@ -5,6 +5,7 @@ use std::io::Result;
 
 mod board;
 mod flow;
+mod monster;
 mod player;
 mod render;
 mod term;
@@ -15,8 +16,9 @@ fn main() -> Result<()> {
 
     term::register(&mut dispatcher_builder, &mut world).unwrap();
     board::register(&mut dispatcher_builder, &mut world).unwrap();
-    flow::register(&mut dispatcher_builder, &mut world).unwrap();
     player::register(&mut dispatcher_builder, &mut world).unwrap();
+    monster::register(&mut dispatcher_builder, &mut world).unwrap();
+    flow::register(&mut dispatcher_builder, &mut world).unwrap();
     render::register(&mut dispatcher_builder, &mut world).unwrap();
 
     let mut dispatcher = dispatcher_builder.build();
