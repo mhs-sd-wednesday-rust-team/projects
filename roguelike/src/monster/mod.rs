@@ -3,7 +3,8 @@ use specs::prelude::*;
 use specs::Component;
 
 use crate::board::tile::Tile;
-use crate::board::{position::Position, WorldTileMap};
+use crate::board::WorldTileMap;
+use crate::components::Position;
 use crate::flow::{GameFlow, GameState};
 use crate::player::{find_creature_spawn_position, Player};
 
