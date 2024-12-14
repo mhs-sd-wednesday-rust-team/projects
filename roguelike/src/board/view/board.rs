@@ -5,10 +5,8 @@ use ratatui::{
 };
 
 use crate::{
-    board::WorldTileMap,
-    monster::view::monster::MonsterView,
+    board::WorldTileMap, components::Position, monster::view::monster::MonsterView,
     player::view::player::PlayerView,
-    components::Position,
 };
 
 use super::view_tile::WorldTile;

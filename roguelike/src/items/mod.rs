@@ -32,7 +32,14 @@ impl<'a> specs::System<'a> for ItemCollectionSystem {
     fn run(&mut self, (player, mut wants_pickup, mut tile_map, mut backpack): Self::SystemData) {
         for pickup in wants_pickup.join() {
             // TODO: Add removing item from map
-            backpack.insert(pickup.item, InBackpack{owner: pickup.collected_by}).unwrap();
+            backpack
+                .insert(
+                    pickup.item,
+                    InBackpack {
+                        owner: pickup.collected_by,
+                    },
+                )
+                .unwrap();
         }
         wants_pickup.clear();
     }

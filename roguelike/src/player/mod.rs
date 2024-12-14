@@ -6,9 +6,9 @@ use specs::{Component, DenseVecStorage, DispatcherBuilder, World, WorldExt};
 
 use crate::board::tile::Tile;
 use crate::board::WorldTileMap;
+use crate::components::{CombatStats, Position};
 use crate::flow::{GameFlow, GameState};
 use crate::monster::Monster;
-use crate::components::{CombatStats, Position};
 use crate::term::TermEvents;
 
 pub mod view;

@@ -2,12 +2,12 @@ use specs::{prelude::ResourceId, DispatcherBuilder, Join, SystemData, World};
 
 use crate::{
     board::WorldTileMap,
+    components::Position,
     flow::{
         view::{FinishMenuView, GameView, PlayView, StartMenuView},
         GameFlow, GameState,
     },
     monster::Monster,
-    components::Position,
     player::Player,
     term::Term,
 };
