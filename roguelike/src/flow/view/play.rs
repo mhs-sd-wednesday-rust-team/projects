@@ -4,7 +4,8 @@ use ratatui::{
 };
 
 use crate::{
-    board::{position::Position, view::board::BoardView, WorldTileMap},
+    board::{view::board::BoardView, WorldTileMap},
+    components::Position,
     flow::Level,
 };
 

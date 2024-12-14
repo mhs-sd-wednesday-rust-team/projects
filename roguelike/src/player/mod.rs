@@ -4,10 +4,11 @@ use rand::seq::IteratorRandom;
 use specs::prelude::*;
 use specs::{Component, DenseVecStorage, DispatcherBuilder, World, WorldExt};
 
+use crate::board::tile::Tile;
 use crate::board::WorldTileMap;
-use crate::board::{position::Position, tile::Tile};
 use crate::flow::{GameFlow, GameState};
 use crate::monster::Monster;
+use crate::components::{CombatStats, Position};
 use crate::term::TermEvents;
 
 pub mod view;
@@ -142,6 +143,12 @@ pub fn register(dispatcher: &mut DispatcherBuilder, world: &mut World) -> anyhow
         .create_entity()
         .with(player_spawn_position)
         .with(Player {})
+        .with(CombatStats {
+            max_hp: 30,
+            hp: 30,
+            defense: 2,
+            power: 5,
+        })
         .build();
 
     dispatcher.add(PlayerMoveSystem, "player_move_system", &[]);

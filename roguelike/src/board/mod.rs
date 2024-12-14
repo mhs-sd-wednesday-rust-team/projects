@@ -1,13 +1,13 @@
 use generator::generate_map;
 use mapgen::MapBuffer;
-use position::Position;
+use crate::components::Position;
+
 use specs::{DispatcherBuilder, World, WorldExt};
 use tile::Tile;
 
 use self::tile::Biome;
 
 pub mod generator;
-pub mod position;
 pub mod tile;
 pub mod view;
 

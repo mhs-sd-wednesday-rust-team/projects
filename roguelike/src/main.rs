@@ -3,6 +3,7 @@ use flow::{GameFlow, GameState};
 use specs::{DispatcherBuilder, World, WorldExt};
 use std::io::Result;
 
+mod components;
 mod board;
 mod flow;
 mod monster;
