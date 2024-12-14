@@ -4,7 +4,8 @@ use specs::{DispatcherBuilder, World};
 
 use crate::player::find_creature_spawn_position;
 use crate::{
-    board::{generator::generate_map, position::Position, WorldTileMap},
+    board::{generator::generate_map, WorldTileMap},
+    components::Position,
     player::Player,
     term::TermEvents,
 };
