@@ -39,6 +39,7 @@ impl<'a> specs::System<'a> for ItemCollectionSystem {
 }
 
 pub fn register(dispatcher: &mut DispatcherBuilder, world: &mut World) -> anyhow::Result<()> {
+    world.register::<CombatStats>();
     // world.register::<Player>();
 
     // let player_spawn_position = {
