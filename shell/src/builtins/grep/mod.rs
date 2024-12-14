@@ -41,8 +41,8 @@ pub struct GrepFlags {
 }
 
 impl GrepCommand {
-    const STDIN_WILDCARD: &str = "-";
-    const MATCH_GROUP_DELIM: &str = "--";
+    const STDIN_WILDCARD: &'static str = "-";
+    const MATCH_GROUP_DELIM: &'static str = "--";
 
     fn parse_patterns(
         raw_patterns: &str,

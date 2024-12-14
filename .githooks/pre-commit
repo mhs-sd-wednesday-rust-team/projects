@@ -1,0 +1,23 @@
+#!/bin/bash
+
+diff=$(cargo fmt -- --check)
+result=$?
+
+if [[ ${result} -ne 0 ]] ; then
+    cat <<\EOF
+There are some code style issues, run `cargo fmt` first.
+EOF
+    exit 1
+fi
+
+diff=$(RUSTFLAGS=-Dwarnings cargo clippy --all-features --all-targets)
+result=$?
+
+if [[ ${result} -ne 0 ]] ; then
+    cat <<\EOF
+There are some clippy issues, run `cargo clippy --all-features --all-targets` first.
+EOF
+    exit 1
+fi
+
+exit 0

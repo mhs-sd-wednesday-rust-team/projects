@@ -17,9 +17,6 @@ jobs:
   test-ubuntu:
     runs-on: ubuntu-latest
     name: ubuntu / stable
-    defaults:
-      run:
-        working-directory: ./shell
     steps:
       - uses: actions/checkout@v4
         with:
@@ -37,9 +34,6 @@ jobs:
   test-windows:
     runs-on: windows-latest
     name: windows / stable
-    defaults:
-      run:
-        working-directory: ./shell
     steps:
       - uses: actions/checkout@v4
         with:
@@ -57,9 +51,6 @@ jobs:
   test-macos:
     runs-on: macos-latest
     name: macos / stable
-    defaults:
-      run:
-        working-directory: ./shell
     steps:
       - uses: actions/checkout@v4
         with:
