@@ -1,4 +1,4 @@
-use specs::{Component, DenseVecStorage};
+use specs::{Component, DenseVecStorage, Entity};
 
 #[derive(Component, Clone, Copy)]
 pub struct Position {
@@ -12,4 +12,15 @@ pub struct CombatStats {
     pub hp: i64,
     pub defense: i64,
     pub power: i64,
+}
+
+#[derive(Component, Clone)]
+pub struct InBackpack {
+    pub owner: Entity,
+}
+
+#[derive(Component, Clone)]
+pub struct WantsToPickupItem {
+    pub collected_by: Entity,
+    pub item: Entity,
 }

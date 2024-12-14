@@ -3,9 +3,10 @@ use flow::{GameFlow, GameState};
 use specs::{DispatcherBuilder, World, WorldExt};
 use std::io::Result;
 
-mod components;
 mod board;
+mod components;
 mod flow;
+mod items;
 mod monster;
 mod player;
 mod render;
@@ -20,6 +21,7 @@ fn main() -> Result<()> {
     player::register(&mut dispatcher_builder, &mut world).unwrap();
     monster::register(&mut dispatcher_builder, &mut world).unwrap();
     flow::register(&mut dispatcher_builder, &mut world).unwrap();
+    // items::register(&mut dispatcher_builder, &mut world).unwrap();
     render::register(&mut dispatcher_builder, &mut world).unwrap();
 
     let mut dispatcher = dispatcher_builder.build();
