@@ -1,6 +1,6 @@
+use crate::components::Position;
 use generator::generate_map;
 use mapgen::MapBuffer;
-use crate::components::Position;
 
 use specs::{DispatcherBuilder, World, WorldExt};
 use tile::Tile;
