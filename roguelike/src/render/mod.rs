@@ -7,6 +7,7 @@ use crate::{
         view::{FinishMenuView, GameView, PlayView, StartMenuView},
         GameFlow, GameState,
     },
+    items::Potion,
     monster::Monster,
     player::Player,
     term::Term,
@@ -22,6 +23,7 @@ struct RenderSystemData<'a> {
     pos: specs::ReadStorage<'a, Position>,
     player: specs::ReadStorage<'a, Player>,
     monsters: specs::ReadStorage<'a, Monster>,
+    potions: specs::ReadStorage<'a, Potion>,
 }
 
 impl<'a> specs::System<'a> for RenderSystem {
@@ -42,11 +44,16 @@ impl<'a> specs::System<'a> for RenderSystem {
                             .join()
                             .map(|(pos, _)| pos)
                             .collect();
+                        let potions: Vec<&Position> = (&data.pos, &data.potions)
+                            .join()
+                            .map(|(pos, _)| pos)
+                            .collect();
                         frame.render_widget(
                             GameView::Play(PlayView {
                                 map: &data.map,
                                 player: (&data.pos, &data.player).join().next().unwrap().0,
                                 monsters,
+                                potions,
                                 level: &data.game_flow.level,
                             }),
                             area,

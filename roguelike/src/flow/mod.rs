@@ -2,6 +2,7 @@ use crossterm::event::{self, KeyCode};
 use specs::prelude::*;
 use specs::{DispatcherBuilder, World};
 
+use crate::items::{find_item_spawn_position, DEFAULT_POTIONS_NUMBER, DEFAULT_WEAPON_NUMBER};
 use crate::monster::{self, find_creature_spawn_position, Monster, DEFAULT_MONSTERS_NUMBER};
 use crate::{
     board::{generator::generate_map, WorldTileMap},
@@ -115,6 +116,14 @@ impl<'a> specs::System<'a> for DummyFlowSystem {
                             *pos =
                                 find_creature_spawn_position(&tile_map, &mut creatures_positions)
                                     .unwrap_or_else(|e| panic!("{e:?}"));
+                        }
+
+                        let mut items_positions =
+                            Vec::with_capacity(1 + DEFAULT_POTIONS_NUMBER + DEFAULT_WEAPON_NUMBER);
+
+                        for (_, pos) in (&monsters, &mut positions).join() {
+                            *pos = find_item_spawn_position(&tile_map, &mut items_positions)
+                                .unwrap_or_else(|e| panic!("{e:?}"));
                         }
 
                         // TODO: Should also reinitialize stats and update monsters.
