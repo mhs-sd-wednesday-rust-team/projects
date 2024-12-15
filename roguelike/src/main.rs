@@ -6,7 +6,7 @@ use std::io::Result;
 mod board;
 mod components;
 mod flow;
-mod items;
+// mod items;
 mod monster;
 mod player;
 mod render;
@@ -18,7 +18,7 @@ fn main() -> Result<()> {
 
     term::register(&mut dispatcher_builder, &mut world).unwrap();
     board::register(&mut dispatcher_builder, &mut world).unwrap();
-    items::register(&mut dispatcher_builder, &mut world).unwrap();
+    // items::register(&mut dispatcher_builder, &mut world).unwrap();
     player::register(&mut dispatcher_builder, &mut world).unwrap();
     monster::register(&mut dispatcher_builder, &mut world).unwrap();
     flow::register(&mut dispatcher_builder, &mut world).unwrap();
