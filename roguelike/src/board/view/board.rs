@@ -5,8 +5,8 @@ use ratatui::{
 };
 
 use crate::{
-    board::WorldTileMap, components::Position, monster::view::monster::MonsterView,
-    player::view::player::PlayerView,
+    board::WorldTileMap, components::Position, items::view::potion::PotionView,
+    monster::view::monster::MonsterView, player::view::player::PlayerView,
 };
 
 use super::view_tile::WorldTile;
@@ -15,6 +15,7 @@ pub struct BoardView<'a> {
     pub map: &'a WorldTileMap,
     pub player_pos: &'a Position,
     pub monsters_pos: Vec<&'a Position>,
+    pub potion_pos: Vec<&'a Position>,
 }
 
 impl<'a> Widget for BoardView<'a> {
@@ -36,6 +37,14 @@ impl<'a> Widget for BoardView<'a> {
                     }));
                 } else if self.player_pos.x == x as i64 && self.player_pos.y == y as i64 {
                     cells.push(Cell::new(PlayerView {
+                        tag: Default::default(),
+                    }));
+                } else if self
+                    .potion_pos
+                    .iter()
+                    .any(|pos| pos.x == x as i64 && pos.y == y as i64)
+                {
+                    cells.push(Cell::new(PotionView {
                         tag: Default::default(),
                     }));
                 } else {
