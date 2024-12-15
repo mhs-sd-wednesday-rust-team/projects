@@ -4,7 +4,8 @@ use ratatui::{
 };
 
 use crate::{
-    board::{position::Position, view::board::BoardView, WorldTileMap},
+    board::{view::board::BoardView, WorldTileMap},
+    components::Position,
     flow::Level,
 };
 
@@ -12,6 +13,8 @@ pub struct PlayView<'a> {
     pub level: &'a Level,
     pub map: &'a WorldTileMap,
     pub player: &'a Position,
+    pub monsters: Vec<&'a Position>,
+    pub potions: Vec<&'a Position>,
 }
 
 impl<'a> Widget for PlayView<'a> {
@@ -37,6 +40,8 @@ impl<'a> Widget for PlayView<'a> {
         BoardView {
             map: self.map,
             player_pos: self.player,
+            monsters_pos: self.monsters,
+            potion_pos: self.potions,
         }
         .render(layout[0], buf);
         Paragraph::new("move with `arrows` or (`h`,`j`,`k`,`l`); simulate death with `d`")
