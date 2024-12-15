@@ -2,7 +2,7 @@ use crossterm::event::{self, KeyCode};
 use specs::prelude::*;
 use specs::{DispatcherBuilder, World};
 
-use crate::player::find_creature_spawn_position;
+use crate::monster::{self, find_creature_spawn_position, Monster, DEFAULT_MONSTERS_NUMBER};
 use crate::{
     board::{generator::generate_map, WorldTileMap},
     components::Position,
@@ -63,11 +63,19 @@ impl<'a> specs::System<'a> for DummyFlowSystem {
         specs::Write<'a, WorldTileMap>,
         specs::WriteStorage<'a, Position>,
         specs::WriteStorage<'a, Player>,
+        specs::WriteStorage<'a, Monster>,
     );
 
     fn run(
         &mut self,
-        (term_events, mut game_flow, mut tile_map, mut positions, players): Self::SystemData,
+        (
+            term_events,
+            mut game_flow,
+            mut tile_map,
+            mut positions,
+            players,
+            monsters
+        ): Self::SystemData,
     ) {
         for event in term_events.0.iter() {
             if let event::Event::Key(k) = event {
@@ -94,10 +102,21 @@ impl<'a> specs::System<'a> for DummyFlowSystem {
                         let map = generate_map();
                         tile_map.set_map(&map);
 
+                        let mut creatures_positions =
+                            Vec::with_capacity(1 + DEFAULT_MONSTERS_NUMBER);
+
                         for (_, pos) in (&players, &mut positions).join() {
-                            *pos = find_creature_spawn_position(&tile_map)
-                                .unwrap_or_else(|e| panic!("{e:?}"));
+                            *pos =
+                                find_creature_spawn_position(&tile_map, &mut creatures_positions)
+                                    .unwrap_or_else(|e| panic!("{e:?}"));
                         }
+
+                        for (_, pos) in (&monsters, &mut positions).join() {
+                            *pos =
+                                find_creature_spawn_position(&tile_map, &mut creatures_positions)
+                                    .unwrap_or_else(|e| panic!("{e:?}"));
+                        }
+
                         // TODO: Should also reinitialize stats and update monsters.
 
                         game_flow.state = GameState::Running(RunningState::PlayerTurn)
