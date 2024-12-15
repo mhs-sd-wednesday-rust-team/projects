@@ -4,13 +4,16 @@ use specs::Component;
 
 use crate::board::tile::Tile;
 use crate::board::WorldTileMap;
+use crate::components::CombatStats;
 use crate::components::Position;
 use crate::flow::{GameFlow, GameState};
-use crate::player::{find_creature_spawn_position, Player};
+use crate::player::Player;
+use anyhow::anyhow;
+use rand::seq::IteratorRandom;
 
 pub mod view;
 
-const DEFAULT_MONSTERS_NUMBER: usize = 10;
+pub const DEFAULT_MONSTERS_NUMBER: usize = 10;
 
 #[derive(Component)]
 pub struct Monster {}
@@ -93,13 +96,58 @@ impl<'a> specs::System<'a> for MonsterSystem {
     }
 }
 
+pub fn find_creature_spawn_position(
+    map: &WorldTileMap,
+    creatures_positions: &mut Vec<Position>,
+) -> anyhow::Result<Position> {
+    let mut rng = rand::thread_rng();
+
+    let spawn_position = (0..map.height)
+        .zip(0..map.width)
+        .filter(|&pos| {
+            matches!(map.board[pos.0][pos.1], Tile::Ground)
+                && !creatures_positions.contains(&Position {
+                    x: pos.1 as i64,
+                    y: pos.0 as i64,
+                })
+        })
+        .choose(&mut rng)
+        .ok_or(anyhow!("Did not find any ground tile to spawn creature"))?;
+
+    let pos = Position {
+        x: spawn_position.1 as i64,
+        y: spawn_position.0 as i64,
+    };
+    creatures_positions.push(pos);
+    Ok(pos)
+}
+
 pub fn register(dispatcher: &mut DispatcherBuilder, world: &mut World) -> anyhow::Result<()> {
     world.register::<Monster>();
+
+    let mut creatures_positions = Vec::with_capacity(1 + DEFAULT_MONSTERS_NUMBER);
+
+    let player_spawn_position = {
+        let tile_map = world.read_resource::<WorldTileMap>();
+        find_creature_spawn_position(&tile_map, &mut creatures_positions)?
+    };
+
+    world
+        .create_entity()
+        .with(player_spawn_position)
+        .with(Player {})
+        .with(CombatStats {
+            max_hp: 30,
+            hp: 30,
+            defense: 2,
+            power: 5,
+        })
+        .build();
 
     for _ in 0..DEFAULT_MONSTERS_NUMBER {
         let monster_spawn_position = {
             let tile_map = world.read_resource::<WorldTileMap>();
-            find_creature_spawn_position(&tile_map)?
+            find_creature_spawn_position(&tile_map, &mut creatures_positions)?
         };
 
         world

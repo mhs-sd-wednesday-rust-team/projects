@@ -13,7 +13,7 @@ pub struct MonsterView<'a> {
 impl<'a> From<MonsterView<'a>> for Text<'a> {
     fn from(_: MonsterView<'a>) -> Self {
         Span::raw("m")
-            .style(Style::default().fg(Color::Red).bg(Color::Black))
+            .style(Style::default().fg(Color::LightRed).bg(Color::Black))
             .into()
     }
 }

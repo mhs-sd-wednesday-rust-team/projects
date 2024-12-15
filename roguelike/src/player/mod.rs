@@ -1,6 +1,4 @@
-use anyhow::anyhow;
 use crossterm::event::{Event, KeyCode, KeyEventKind};
-use rand::seq::IteratorRandom;
 use specs::prelude::*;
 use specs::{Component, DenseVecStorage, DispatcherBuilder, World, WorldExt};
 
@@ -115,41 +113,8 @@ impl<'a> specs::System<'a> for PlayerMoveSystem {
     }
 }
 
-pub fn find_creature_spawn_position(map: &WorldTileMap) -> anyhow::Result<Position> {
-    let mut rng = rand::thread_rng();
-
-    let spawn_position = (0..map.height)
-        .zip(0..map.width)
-        .filter(|&pos| matches!(map.board[pos.0][pos.1], Tile::Ground))
-        .choose(&mut rng)
-        .ok_or(anyhow!("Did not find any ground tile to spawn player"))?;
-
-    let pos = Position {
-        x: spawn_position.1 as i64,
-        y: spawn_position.0 as i64,
-    };
-    Ok(pos)
-}
-
 pub fn register(dispatcher: &mut DispatcherBuilder, world: &mut World) -> anyhow::Result<()> {
     world.register::<Player>();
-
-    let player_spawn_position = {
-        let tile_map = world.read_resource::<WorldTileMap>();
-        find_creature_spawn_position(&tile_map)?
-    };
-
-    world
-        .create_entity()
-        .with(player_spawn_position)
-        .with(Player {})
-        .with(CombatStats {
-            max_hp: 30,
-            hp: 30,
-            defense: 2,
-            power: 5,
-        })
-        .build();
 
     dispatcher.add(PlayerMoveSystem, "player_move_system", &[]);
     Ok(())
