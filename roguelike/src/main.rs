@@ -4,7 +4,10 @@ use specs::{DispatcherBuilder, World, WorldExt};
 use std::io::Result;
 
 mod board;
+mod components;
 mod flow;
+mod items;
+mod monster;
 mod player;
 mod render;
 mod term;
@@ -15,14 +18,17 @@ fn main() -> Result<()> {
 
     term::register(&mut dispatcher_builder, &mut world).unwrap();
     board::register(&mut dispatcher_builder, &mut world).unwrap();
-    flow::register(&mut dispatcher_builder, &mut world).unwrap();
+    items::register(&mut dispatcher_builder, &mut world).unwrap();
     player::register(&mut dispatcher_builder, &mut world).unwrap();
+    monster::register(&mut dispatcher_builder, &mut world).unwrap();
+    flow::register(&mut dispatcher_builder, &mut world).unwrap();
     render::register(&mut dispatcher_builder, &mut world).unwrap();
 
     let mut dispatcher = dispatcher_builder.build();
 
     while world.read_resource::<GameFlow>().state != GameState::Exit {
         dispatcher.dispatch(&world);
+        world.maintain();
         // some sleep?
     }
 

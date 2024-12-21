@@ -5,8 +5,8 @@ use ratatui::{
 };
 
 use crate::{
-    board::{position::Position, WorldTileMap},
-    player::view::player::PlayerView,
+    board::WorldTileMap, components::Position, items::view::potion::PotionView,
+    monster::view::monster::MonsterView, player::view::player::PlayerView,
 };
 
 use super::view_tile::WorldTile;
@@ -14,6 +14,8 @@ use super::view_tile::WorldTile;
 pub struct BoardView<'a> {
     pub map: &'a WorldTileMap,
     pub player_pos: &'a Position,
+    pub monsters_pos: Vec<&'a Position>,
+    pub potion_pos: Vec<&'a Position>,
 }
 
 impl<'a> Widget for BoardView<'a> {
@@ -25,8 +27,24 @@ impl<'a> Widget for BoardView<'a> {
         for (y, board_row) in self.map.board.iter().enumerate() {
             let mut cells = vec![];
             for (x, board_cell) in board_row.iter().enumerate() {
-                if self.player_pos.x == x as i64 && self.player_pos.y == y as i64 {
+                if self
+                    .monsters_pos
+                    .iter()
+                    .any(|pos| pos.x == x as i64 && pos.y == y as i64)
+                {
+                    cells.push(Cell::new(MonsterView {
+                        tag: Default::default(),
+                    }));
+                } else if self.player_pos.x == x as i64 && self.player_pos.y == y as i64 {
                     cells.push(Cell::new(PlayerView {
+                        tag: Default::default(),
+                    }));
+                } else if self
+                    .potion_pos
+                    .iter()
+                    .any(|pos| pos.x == x as i64 && pos.y == y as i64)
+                {
+                    cells.push(Cell::new(PotionView {
                         tag: Default::default(),
                     }));
                 } else {

@@ -1,11 +1,14 @@
 use specs::{prelude::ResourceId, DispatcherBuilder, Join, SystemData, World};
 
 use crate::{
-    board::{position::Position, WorldTileMap},
+    board::WorldTileMap,
+    components::Position,
     flow::{
         view::{FinishMenuView, GameView, PlayView, StartMenuView},
         GameFlow, GameState,
     },
+    items::Potion,
+    monster::Monster,
     player::Player,
     term::Term,
 };
@@ -19,6 +22,8 @@ struct RenderSystemData<'a> {
     map: specs::Read<'a, WorldTileMap>,
     pos: specs::ReadStorage<'a, Position>,
     player: specs::ReadStorage<'a, Player>,
+    monsters: specs::ReadStorage<'a, Monster>,
+    potions: specs::ReadStorage<'a, Potion>,
 }
 
 impl<'a> specs::System<'a> for RenderSystem {
@@ -34,14 +39,30 @@ impl<'a> specs::System<'a> for RenderSystem {
                     GameState::Finished => {
                         frame.render_widget(GameView::Finish(FinishMenuView), area)
                     }
-                    GameState::Running => frame.render_widget(
-                        GameView::Play(PlayView {
-                            map: &data.map,
-                            player: (&data.pos, &data.player).join().next().unwrap().0,
-                            level: &data.game_flow.level,
-                        }),
-                        area,
-                    ),
+                    GameState::Running(_) => {
+                        let player = (&data.pos, &data.player).join().next();
+                        if let Some((player_pos, _)) = player {
+                            let monsters: Vec<&Position> = (&data.pos, &data.monsters)
+                                .join()
+                                .map(|(pos, _)| pos)
+                                .collect();
+                            let potions: Vec<&Position> = (&data.pos, &data.potions)
+                                .join()
+                                .map(|(pos, _)| pos)
+                                .collect();
+
+                            frame.render_widget(
+                                GameView::Play(PlayView {
+                                    map: &data.map,
+                                    player: player_pos,
+                                    monsters,
+                                    potions,
+                                    level: &data.game_flow.level,
+                                }),
+                                area,
+                            )
+                        }
+                    }
                     GameState::Exit => {}
                 };
             })
