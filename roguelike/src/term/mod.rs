@@ -1,4 +1,7 @@
-use std::io::{stdout, Stdout};
+use std::{
+    io::{stdout, Stdout},
+    panic::{set_hook, take_hook},
+};
 
 use crossterm::{
     event::{self, Event},
@@ -12,6 +15,7 @@ pub struct Term(pub Terminal<CrosstermBackend<Stdout>>);
 
 impl Default for Term {
     fn default() -> Self {
+        init_panic_hook();
         stdout().execute(EnterAlternateScreen).unwrap();
         enable_raw_mode().unwrap();
         let mut terminal = Terminal::new(CrosstermBackend::new(stdout())).unwrap();
@@ -22,9 +26,21 @@ impl Default for Term {
 
 impl Drop for Term {
     fn drop(&mut self) {
-        stdout().execute(LeaveAlternateScreen).unwrap();
-        disable_raw_mode().unwrap();
+        restore_tui();
     }
+}
+
+fn restore_tui() {
+    stdout().execute(LeaveAlternateScreen).unwrap();
+    disable_raw_mode().unwrap();
+}
+
+fn init_panic_hook() {
+    let original_hook = take_hook();
+    set_hook(Box::new(move |panic_info| {
+        restore_tui();
+        original_hook(panic_info);
+    }));
 }
 
 #[derive(Default)]

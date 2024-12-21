@@ -48,29 +48,38 @@ impl PlayerMoveSystem {
 
 impl<'a> specs::System<'a> for PlayerMoveSystem {
     type SystemData = (
+        Entities<'a>,
         specs::WriteStorage<'a, Position>,
         specs::WriteStorage<'a, Player>,
         specs::Read<'a, TermEvents>,
         specs::Read<'a, WorldTileMap>,
     );
 
-    fn run(&mut self, (mut positions, mut players, term_events, world_tile_map): Self::SystemData) {
+    fn run(
+        &mut self,
+        (entities, mut positions, mut players, term_events, world_tile_map): Self::SystemData,
+    ) {
         let world_map = &world_tile_map;
         for event in term_events.0.iter() {
             if let Event::Key(k) = event {
                 if k.kind == KeyEventKind::Press {
                     match k.code {
+                        KeyCode::Char('y') => {
+                            for (_, e) in (&players, &entities).join() {
+                                entities.delete(e).unwrap();
+                            }
+                        }
                         KeyCode::Up | KeyCode::Char('k') => {
-                            Self::try_move_player(world_map, &mut players, &mut positions, 0, -1)
+                            Self::try_move_player(world_map, &mut players, &mut positions, 0, -1);
                         }
                         KeyCode::Down | KeyCode::Char('j') => {
-                            Self::try_move_player(world_map, &mut players, &mut positions, 0, 1)
+                            Self::try_move_player(world_map, &mut players, &mut positions, 0, 1);
                         }
                         KeyCode::Left | KeyCode::Char('h') => {
-                            Self::try_move_player(world_map, &mut players, &mut positions, -1, 0)
+                            Self::try_move_player(world_map, &mut players, &mut positions, -1, 0);
                         }
                         KeyCode::Right | KeyCode::Char('l') => {
-                            Self::try_move_player(world_map, &mut players, &mut positions, 1, 0)
+                            Self::try_move_player(world_map, &mut players, &mut positions, 1, 0);
                         }
                         _ => {}
                     }
