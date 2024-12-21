@@ -1,4 +1,5 @@
 use rand::seq::SliceRandom;
+use rand::Rng;
 use specs::prelude::*;
 use specs::Component;
 
@@ -102,24 +103,23 @@ pub fn find_creature_spawn_position(
 ) -> anyhow::Result<Position> {
     let mut rng = rand::thread_rng();
 
-    let spawn_position = (0..map.height)
-        .zip(0..map.width)
-        .filter(|&pos| {
-            matches!(map.board[pos.0][pos.1], Tile::Ground)
-                && !creatures_positions.contains(&Position {
-                    x: pos.1 as i64,
-                    y: pos.0 as i64,
-                })
-        })
-        .choose(&mut rng)
-        .ok_or(anyhow!("Did not find any ground tile to spawn creature"))?;
+    loop {
+        let x = rng.gen_range(0..map.width);
+        let y = rng.gen_range(0..map.height);
 
-    let pos = Position {
-        x: spawn_position.1 as i64,
-        y: spawn_position.0 as i64,
-    };
-    creatures_positions.push(pos);
-    Ok(pos)
+        let proposed_position = Position {
+            x: x as i64,
+            y: y as i64,
+        };
+
+        if matches!(map.board[y][x], Tile::Wall) || creatures_positions.contains(&proposed_position)
+        {
+            continue;
+        }
+
+        creatures_positions.push(proposed_position);
+        return Ok(proposed_position);
+    }
 }
 
 pub fn register(dispatcher: &mut DispatcherBuilder, world: &mut World) -> anyhow::Result<()> {
