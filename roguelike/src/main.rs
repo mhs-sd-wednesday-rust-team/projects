@@ -28,6 +28,7 @@ fn main() -> Result<()> {
 
     while world.read_resource::<GameFlow>().state != GameState::Exit {
         dispatcher.dispatch(&world);
+        world.maintain();
         // some sleep?
     }
 
