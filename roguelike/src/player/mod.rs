@@ -20,7 +20,7 @@ impl PlayerMoveSystem {
     fn try_move_player<'a>(
         world_tile_map: &WorldTileMap,
         players: &WriteStorage<'a, Player>,
-        monsters: &WriteStorage<'a, Monster>,
+        monsters: &mut WriteStorage<'a, Monster>,
         positions: &mut WriteStorage<'a, Position>,
         delta_x: i64,
         delta_y: i64,
@@ -38,13 +38,19 @@ impl PlayerMoveSystem {
 
         let monsters_collision = (monsters, positions as &WriteStorage<'a, Position>)
             .join()
-            .any(|(_, pos)| pos.x == new_pos.x && pos.y == new_pos.y);
+            .find(|(_, pos)| pos.x == new_pos.x && pos.y == new_pos.y)
+            .map(|(m, _)| m);
 
         for (_, pos) in (players, positions).join() {
             let out_of_width = !(0 <= new_pos.x && new_pos.x < world_tile_map.width as i64);
             let out_of_height = !(0 <= new_pos.y && new_pos.y < world_tile_map.height as i64);
-            if out_of_width || out_of_height || monsters_collision {
+
+            if out_of_width || out_of_height {
                 continue;
+            }
+
+            if let Some(monster) = monsters_collision {
+                return true;
             }
 
             if matches!(
@@ -75,7 +81,7 @@ impl<'a> specs::System<'a> for PlayerMoveSystem {
         (
             mut positions,
             players,
-            monsters,
+            mut monsters,
             term_events,
             world_tile_map,
             mut game_flow
@@ -97,7 +103,7 @@ impl<'a> specs::System<'a> for PlayerMoveSystem {
                         let moved = Self::try_move_player(
                             world_map,
                             &players,
-                            &monsters,
+                            &mut monsters,
                             &mut positions,
                             delta_x,
                             delta_y,
