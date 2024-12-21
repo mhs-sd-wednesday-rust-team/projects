@@ -59,6 +59,7 @@ struct DummyFlowSystem;
 
 impl<'a> specs::System<'a> for DummyFlowSystem {
     type SystemData = (
+        Entities<'a>,
         specs::Read<'a, TermEvents>,
         specs::Write<'a, GameFlow>,
         specs::Write<'a, WorldTileMap>,
@@ -70,6 +71,7 @@ impl<'a> specs::System<'a> for DummyFlowSystem {
     fn run(
         &mut self,
         (
+            entities,
             term_events,
             mut game_flow,
             mut tile_map,
@@ -102,6 +104,17 @@ impl<'a> specs::System<'a> for DummyFlowSystem {
                     GameState::Finished => {
                         let map = generate_map();
                         tile_map.set_map(&map);
+
+                        // TODO: Recreate player and monsters entities instead of
+                        //       changing their positions.
+                        //       We have to respawn them in case player killing monsters or
+                        //       a monster killing player.
+                        // for (e, _) in (&entities, &players).join() {
+                        //     entities.delete(e);
+                        // }
+                        // for (e, _) in (&entities, &monsters).join() {
+                        //     entities.delete(e);
+                        // }
 
                         let mut creatures_positions =
                             Vec::with_capacity(1 + DEFAULT_MONSTERS_NUMBER);

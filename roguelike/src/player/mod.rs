@@ -19,6 +19,7 @@ struct PlayerMoveSystem;
 impl PlayerMoveSystem {
     fn try_move_player<'a>(
         world_tile_map: &WorldTileMap,
+        entities: &Entities,
         players: &WriteStorage<'a, Player>,
         monsters: &mut WriteStorage<'a, Monster>,
         positions: &mut WriteStorage<'a, Position>,
@@ -36,10 +37,10 @@ impl PlayerMoveSystem {
             }
         };
 
-        let monsters_collision = (monsters, positions as &WriteStorage<'a, Position>)
+        let monsters_collision = (entities, monsters, positions as &WriteStorage<'a, Position>)
             .join()
-            .find(|(_, pos)| pos.x == new_pos.x && pos.y == new_pos.y)
-            .map(|(m, _)| m);
+            .find(|(_, _, pos)| pos.x == new_pos.x && pos.y == new_pos.y)
+            .map(|(e, _, _)| e);
 
         for (_, pos) in (players, positions).join() {
             let out_of_width = !(0 <= new_pos.x && new_pos.x < world_tile_map.width as i64);
@@ -49,7 +50,11 @@ impl PlayerMoveSystem {
                 continue;
             }
 
-            if let Some(monster) = monsters_collision {
+            if let Some(monster_to_delete) = monsters_collision {
+                entities.delete(monster_to_delete);
+
+                pos.x = new_pos.x;
+                pos.y = new_pos.y;
                 return true;
             }
 
@@ -86,7 +91,7 @@ impl<'a> specs::System<'a> for PlayerMoveSystem {
             mut monsters,
             term_events,
             world_tile_map,
-            mut game_flow
+            mut game_flow,
         ): Self::SystemData,
     ) {
         let world_map = &world_tile_map;
@@ -104,6 +109,7 @@ impl<'a> specs::System<'a> for PlayerMoveSystem {
                     if let Some((delta_x, delta_y)) = deltas {
                         let moved = Self::try_move_player(
                             world_map,
+                            &entities,
                             &players,
                             &mut monsters,
                             &mut positions,
