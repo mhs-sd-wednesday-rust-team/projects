@@ -40,24 +40,28 @@ impl<'a> specs::System<'a> for RenderSystem {
                         frame.render_widget(GameView::Finish(FinishMenuView), area)
                     }
                     GameState::Running(_) => {
-                        let monsters: Vec<&Position> = (&data.pos, &data.monsters)
-                            .join()
-                            .map(|(pos, _)| pos)
-                            .collect();
-                        let potions: Vec<&Position> = (&data.pos, &data.potions)
-                            .join()
-                            .map(|(pos, _)| pos)
-                            .collect();
-                        frame.render_widget(
-                            GameView::Play(PlayView {
-                                map: &data.map,
-                                player: (&data.pos, &data.player).join().next().unwrap().0,
-                                monsters,
-                                potions,
-                                level: &data.game_flow.level,
-                            }),
-                            area,
-                        )
+                        let player = (&data.pos, &data.player).join().next();
+                        if let Some((player_pos, _)) = player {
+                            let monsters: Vec<&Position> = (&data.pos, &data.monsters)
+                                .join()
+                                .map(|(pos, _)| pos)
+                                .collect();
+                            let potions: Vec<&Position> = (&data.pos, &data.potions)
+                                .join()
+                                .map(|(pos, _)| pos)
+                                .collect();
+
+                            frame.render_widget(
+                                GameView::Play(PlayView {
+                                    map: &data.map,
+                                    player: player_pos,
+                                    monsters,
+                                    potions,
+                                    level: &data.game_flow.level,
+                                }),
+                                area,
+                            )
+                        }
                     }
                     GameState::Exit => {}
                 };
