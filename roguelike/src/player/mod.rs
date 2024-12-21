@@ -68,6 +68,7 @@ impl PlayerMoveSystem {
 
 impl<'a> specs::System<'a> for PlayerMoveSystem {
     type SystemData = (
+        Entities<'a>,
         specs::WriteStorage<'a, Position>,
         specs::WriteStorage<'a, Player>,
         specs::WriteStorage<'a, Monster>,
@@ -79,6 +80,7 @@ impl<'a> specs::System<'a> for PlayerMoveSystem {
     fn run(
         &mut self,
         (
+            entities,
             mut positions,
             players,
             mut monsters,
