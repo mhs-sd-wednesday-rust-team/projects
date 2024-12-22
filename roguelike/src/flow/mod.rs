@@ -100,6 +100,10 @@ impl<'a> specs::System<'a> for DummyFlowSystem {
                         }
                     }
                     GameState::Finished => {
+                        if k.code != KeyCode::Enter {
+                            continue;
+                        }
+
                         let map: mapgen::MapBuffer = generate_map();
                         tile_map.set_map(&map);
 
