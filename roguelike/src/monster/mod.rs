@@ -34,6 +34,9 @@ impl Distribution<MobStrategy> for Standard {
 
 #[derive(Component)]
 pub struct Monster {
+    // Workaround for lazy entities deleting.
+    // Saying that we should skip this entity handling.
+    pub is_alive: bool,
     strategy: MobStrategy,
 }
 
@@ -46,7 +49,6 @@ impl MonsterSystem {
         players: &WriteStorage<'a, Player>,
         monsters: &WriteStorage<'a, Monster>,
         positions: &mut WriteStorage<'a, Position>,
-        game_flow: &mut specs::Write<'a, GameFlow>,
     ) -> bool {
         let player_pos = {
             let (_, pos) = (players, positions as &WriteStorage<'a, Position>)
@@ -64,6 +66,9 @@ impl MonsterSystem {
                 .collect();
 
         for (i, (monster, pos)) in (monsters, positions).join().enumerate() {
+            if !monster.is_alive {
+                continue;
+            }
             let (delta_x, delta_y) = match monster.strategy {
                 MobStrategy::Random => {
                     let deltas = [-1, 0, 1];
@@ -146,7 +151,6 @@ impl<'a> specs::System<'a> for MonsterSystem {
                 &players,
                 &monsters,
                 &mut positions,
-                &mut game_flow,
             );
             if player_is_killed {
                 game_flow.state = GameState::Finished
@@ -215,7 +219,7 @@ pub fn register(dispatcher: &mut DispatcherBuilder, world: &mut World) -> anyhow
         world
             .create_entity()
             .with(monster_spawn_position)
-            .with(Monster { strategy })
+            .with(Monster { strategy, is_alive: true })
             .build();
     }
 

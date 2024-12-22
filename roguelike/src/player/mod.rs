@@ -40,7 +40,7 @@ impl PlayerMoveSystem {
         let monsters_collision = (entities, monsters, positions as &WriteStorage<'a, Position>)
             .join()
             .find(|(_, _, pos)| pos.x == new_pos.x && pos.y == new_pos.y)
-            .map(|(e, _, _)| e);
+            .map(|(e, m, _)| (e, m));
 
         for (_, pos) in (players, positions).join() {
             let out_of_width = !(0 <= new_pos.x && new_pos.x < world_tile_map.width as i64);
@@ -50,8 +50,9 @@ impl PlayerMoveSystem {
                 continue;
             }
 
-            if let Some(monster_to_delete) = monsters_collision {
-                entities.delete(monster_to_delete).unwrap();
+            if let Some((e, m)) = monsters_collision {
+                m.is_alive = false;
+                entities.delete(e);
 
                 pos.x = new_pos.x;
                 pos.y = new_pos.y;
