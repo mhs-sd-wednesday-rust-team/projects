@@ -52,7 +52,9 @@ impl PlayerMoveSystem {
 
             if let Some((e, m)) = monsters_collision {
                 m.is_alive = false;
-                entities.delete(e);
+                entities
+                    .delete(e)
+                    .expect("Monster entity killing should succeed");
 
                 pos.x = new_pos.x;
                 pos.y = new_pos.y;

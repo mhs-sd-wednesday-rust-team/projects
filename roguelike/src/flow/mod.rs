@@ -59,7 +59,6 @@ struct DummyFlowSystem;
 
 impl<'a> specs::System<'a> for DummyFlowSystem {
     type SystemData = (
-        Entities<'a>,
         specs::Read<'a, TermEvents>,
         specs::Write<'a, GameFlow>,
         specs::Write<'a, WorldTileMap>,
@@ -71,7 +70,6 @@ impl<'a> specs::System<'a> for DummyFlowSystem {
     fn run(
         &mut self,
         (
-            _entities,
             term_events,
             mut game_flow,
             mut tile_map,

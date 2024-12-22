@@ -81,7 +81,7 @@ impl MonsterSystem {
                     let distance_to_the_player = pos.distance(&player_pos);
 
                     if distance_to_the_player < MONSTER_SEE_DISTANCE {
-                        pos.into_direction(&player_pos)
+                        pos.find_direction(&player_pos)
                     } else {
                         (0, 0)
                     }
@@ -90,7 +90,7 @@ impl MonsterSystem {
                     let distance_to_the_player = pos.distance(&player_pos);
 
                     if distance_to_the_player < MONSTER_SEE_DISTANCE {
-                        let (delta_x, delta_y) = pos.into_direction(&player_pos);
+                        let (delta_x, delta_y) = pos.find_direction(&player_pos);
                         (-delta_x, -delta_y)
                     } else {
                         (0, 0)
@@ -146,12 +146,8 @@ impl<'a> specs::System<'a> for MonsterSystem {
     ) {
         if game_flow.state == GameState::Running(crate::flow::RunningState::MobsTurn) {
             let world_map = &world_tile_map;
-            let player_is_killed = Self::try_move_monsters(
-                world_map,
-                &players,
-                &monsters,
-                &mut positions,
-            );
+            let player_is_killed =
+                Self::try_move_monsters(world_map, &players, &monsters, &mut positions);
             if player_is_killed {
                 game_flow.state = GameState::Finished
             } else {
@@ -219,7 +215,10 @@ pub fn register(dispatcher: &mut DispatcherBuilder, world: &mut World) -> anyhow
         world
             .create_entity()
             .with(monster_spawn_position)
-            .with(Monster { strategy, is_alive: true })
+            .with(Monster {
+                strategy,
+                is_alive: true,
+            })
             .build();
     }
 
