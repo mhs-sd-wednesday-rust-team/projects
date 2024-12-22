@@ -7,6 +7,10 @@ pub struct Position {
 }
 
 impl Position {
+    pub fn new(x: i64, y: i64) -> Self {
+        Self { x, y }
+    }
+
     pub fn distance(&self, other: &Self) -> i64 {
         (self.x - other.x).abs() + (self.y - other.y).abs()
     }
