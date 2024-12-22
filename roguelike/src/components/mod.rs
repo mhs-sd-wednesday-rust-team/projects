@@ -1,6 +1,6 @@
 use specs::{Component, DenseVecStorage};
 
-#[derive(Component, Clone, Copy, PartialEq, Eq)]
+#[derive(Component, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Position {
     pub x: i64,
     pub y: i64,

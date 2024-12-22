@@ -20,9 +20,13 @@ fn main() -> Result<()> {
     board::register(&mut dispatcher_builder, &mut world).unwrap();
     items::register(&mut dispatcher_builder, &mut world).unwrap();
     player::register(&mut dispatcher_builder, &mut world).unwrap();
+    monster::split_ability::register_components(&mut world).unwrap();
     monster::register(&mut dispatcher_builder, &mut world).unwrap();
     flow::register(&mut dispatcher_builder, &mut world).unwrap();
     render::register(&mut dispatcher_builder, &mut world).unwrap();
+
+    monster::split_ability::register_systems(&mut dispatcher_builder).unwrap();
+    monster::end_mob_turn::register_systems(&mut dispatcher_builder).unwrap();
 
     let mut dispatcher = dispatcher_builder.build();
 
