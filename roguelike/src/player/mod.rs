@@ -67,7 +67,10 @@ impl PlayerMoveSystem {
                 return true;
             }
         }
-        false
+
+        // TODO: Should be changed to false (e.g. in
+        //       case player tried to move into the wall).
+        true
     }
 }
 
