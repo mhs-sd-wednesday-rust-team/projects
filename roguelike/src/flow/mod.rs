@@ -3,7 +3,7 @@ use specs::prelude::*;
 use specs::{DispatcherBuilder, World};
 
 use crate::items::{find_item_spawn_position, DEFAULT_POTIONS_NUMBER, DEFAULT_WEAPON_NUMBER};
-use crate::monster::{self, find_creature_spawn_position, Monster, DEFAULT_MONSTERS_NUMBER};
+use crate::monster::{find_creature_spawn_position, Monster, DEFAULT_MONSTERS_NUMBER};
 use crate::{
     board::{generator::generate_map, WorldTileMap},
     components::Position,
@@ -71,7 +71,7 @@ impl<'a> specs::System<'a> for DummyFlowSystem {
     fn run(
         &mut self,
         (
-            entities,
+            _entities,
             term_events,
             mut game_flow,
             mut tile_map,

@@ -51,7 +51,7 @@ impl PlayerMoveSystem {
             }
 
             if let Some(monster_to_delete) = monsters_collision {
-                entities.delete(monster_to_delete);
+                entities.delete(monster_to_delete).unwrap();
 
                 pos.x = new_pos.x;
                 pos.y = new_pos.y;
@@ -182,6 +182,7 @@ mod tests {
             let mut world = World::new();
             world.register::<Player>();
             world.register::<Position>();
+            world.register::<Monster>();
 
             world
                 .create_entity()
@@ -192,8 +193,11 @@ mod tests {
             let players = &mut world.write_component::<Player>();
             let monsters = &mut world.write_component::<Monster>();
             let positions = &mut world.write_component::<Position>();
+            let entities: Entities = world.entities();
 
-            PlayerMoveSystem::try_move_player(&map, players, monsters, positions, dx, dy);
+            PlayerMoveSystem::try_move_player(
+                &map, &entities, players, monsters, positions, dx, dy,
+            );
 
             for (_player, pos) in (players, positions).join() {
                 let actual_pos = (pos.x, pos.y);

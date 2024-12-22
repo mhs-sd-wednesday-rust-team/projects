@@ -15,6 +15,7 @@ pub const DEFAULT_WEAPON_NUMBER: usize = 0;
 #[derive(Component)]
 pub struct Item {}
 
+#[allow(dead_code)]
 #[derive(Component)]
 pub struct Potion {
     pub heal_amount: i64,
@@ -48,7 +49,7 @@ impl<'a> specs::System<'a> for ItemCollectionSystem {
 
 pub fn find_item_spawn_position(
     map: &WorldTileMap,
-    item_positions: &mut Vec<Position>,
+    item_positions: &mut [Position],
 ) -> anyhow::Result<Position> {
     let mut rng = rand::thread_rng();
 

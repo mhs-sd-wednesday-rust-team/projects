@@ -6,6 +6,7 @@ pub struct Position {
     pub y: i64,
 }
 
+#[allow(dead_code)]
 #[derive(Component)]
 pub struct CombatStats {
     pub max_hp: i64,
