@@ -12,7 +12,7 @@ impl Position {
     }
 
     /// Find pair of deltas, which will make us closer to `other`.
-    pub fn into_direction(&self, other: &Self) -> (i64, i64) {
+    pub fn find_direction(&self, other: &Self) -> (i64, i64) {
         let dx = other.x - self.x;
         let dy = other.y - self.y;
 

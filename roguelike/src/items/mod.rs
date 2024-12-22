@@ -17,6 +17,7 @@ pub struct Item {}
 
 #[allow(dead_code)]
 #[derive(Component)]
+#[allow(dead_code)]
 pub struct Potion {
     pub heal_amount: i64,
 }
