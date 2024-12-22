@@ -173,10 +173,7 @@ pub fn find_creature_spawn_position(
         let x = rng.gen_range(0..map.width);
         let y = rng.gen_range(0..map.height);
 
-        let proposed_position = Position {
-            x: x as i64,
-            y: y as i64,
-        };
+        let proposed_position = Position::new(x as i64, y as i64);
 
         if matches!(map.board[y][x], Tile::Wall) || creatures_positions.contains(&proposed_position)
         {
@@ -230,4 +227,47 @@ pub fn register(dispatcher: &mut DispatcherBuilder, world: &mut World) -> anyhow
 
     dispatcher.add(MonsterSystem, "monster_system", &["player_move_system"]);
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_mob_strategy_deltas_calculation() {
+        let player_x = 10;
+        let player_y = 10;
+        let player_pos = Position::new(player_x, player_y);
+        let coward_monster_pos_to_expected_delta = vec![
+            (
+                Position::new(player_x - MONSTER_SEE_DISTANCE, player_y),
+                (0, 0),
+            ),
+            (
+                Position::new(player_x, player_y + MONSTER_SEE_DISTANCE),
+                (0, 0),
+            ),
+            (Position::new(player_x + 1, player_y), (1, 0)),
+            (Position::new(player_x - 1, player_y), (-1, 0)),
+            (Position::new(player_x, player_y + 1), (0, 1)),
+            (Position::new(player_x, player_y - 1), (0, -1)),
+            (Position::new(player_x - 1, player_y - 1), (-1, 0)),
+            (Position::new(player_x + 1, player_y + 1), (1, 0)),
+        ];
+
+        let mut monster = Monster {
+            is_alive: true,
+            strategy: MobStrategy::Coward,
+        };
+        for (monster_pos, expected_delta) in coward_monster_pos_to_expected_delta.iter() {
+            let actual_delta = monster.strategy.find_deltas(monster_pos, &player_pos);
+            assert_eq!(*expected_delta, actual_delta);
+        }
+        monster.strategy = MobStrategy::Aggressive;
+        for (monster_pos, expected_delta) in coward_monster_pos_to_expected_delta.iter() {
+            let expected_delta = (-expected_delta.0, -expected_delta.1);
+            let actual_delta = monster.strategy.find_deltas(&monster_pos, &player_pos);
+            assert_eq!(expected_delta, actual_delta);
+        }
+    }
 }
