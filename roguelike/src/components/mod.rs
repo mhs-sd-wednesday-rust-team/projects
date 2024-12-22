@@ -6,8 +6,26 @@ pub struct Position {
     pub y: i64,
 }
 
-#[allow(dead_code)]
+impl Position {
+    pub fn distance(&self, other: &Self) -> i64 {
+        (self.x - other.x).abs() + (self.y - other.y).abs()
+    }
+
+    /// Find pair of deltas, which will make us closer to `other`.
+    pub fn into_direction(&self, other: &Self) -> (i64, i64) {
+        let dx = other.x - self.x;
+        let dy = other.y - self.y;
+
+        if dx.abs() >= dy.abs() {
+            (dx.signum(), 0)
+        } else {
+            (0, dy.signum())
+        }
+    }
+}
+
 #[derive(Component)]
+#[allow(dead_code)]
 pub struct CombatStats {
     pub max_hp: i64,
     pub hp: i64,

@@ -1,3 +1,4 @@
+use rand::distributions::{Distribution, Standard};
 use rand::seq::SliceRandom;
 use rand::Rng;
 use specs::prelude::*;
@@ -13,19 +14,40 @@ use crate::player::Player;
 pub mod view;
 
 pub const DEFAULT_MONSTERS_NUMBER: usize = 10;
+pub const MONSTER_SEE_DISTANCE: i64 = 10;
+
+enum MobStrategy {
+    Random,
+    Aggressive,
+    Coward,
+}
+
+impl Distribution<MobStrategy> for Standard {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> MobStrategy {
+        match rng.gen_range(0..3) {
+            0 => MobStrategy::Random,
+            1 => MobStrategy::Aggressive,
+            _ => MobStrategy::Coward,
+        }
+    }
+}
 
 #[derive(Component)]
-pub struct Monster {}
+pub struct Monster {
+    strategy: MobStrategy,
+}
 
 struct MonsterSystem;
 
 impl MonsterSystem {
+    /// Returns true in case monster killed a player.
     fn try_move_monsters<'a>(
         world_tile_map: &WorldTileMap,
         players: &WriteStorage<'a, Player>,
         monsters: &WriteStorage<'a, Monster>,
         positions: &mut WriteStorage<'a, Position>,
-    ) {
+        game_flow: &mut specs::Write<'a, GameFlow>,
+    ) -> bool {
         let player_pos = {
             let (_, pos) = (players, positions as &WriteStorage<'a, Position>)
                 .join()
@@ -41,11 +63,35 @@ impl MonsterSystem {
                 .map(|(i, (_, pos))| (i, *pos))
                 .collect();
 
-        for (i, (_, pos)) in (monsters, positions).join().enumerate() {
-            let deltas = [-1, 0, 1];
-            let mut rng = rand::thread_rng();
-            let delta_x = *deltas.choose(&mut rng).expect("Delta must exist.");
-            let delta_y = *deltas.choose(&mut rng).expect("Delta must exist.");
+        for (i, (monster, pos)) in (monsters, positions).join().enumerate() {
+            let (delta_x, delta_y) = match monster.strategy {
+                MobStrategy::Random => {
+                    let deltas = [-1, 0, 1];
+                    let mut rng = rand::thread_rng();
+                    let delta_x = *deltas.choose(&mut rng).expect("Delta must exist.");
+                    let delta_y = *deltas.choose(&mut rng).expect("Delta must exist.");
+                    (delta_x, delta_y)
+                }
+                MobStrategy::Aggressive => {
+                    let distance_to_the_player = pos.distance(&player_pos);
+
+                    if distance_to_the_player < MONSTER_SEE_DISTANCE {
+                        pos.into_direction(&player_pos)
+                    } else {
+                        (0, 0)
+                    }
+                }
+                MobStrategy::Coward => {
+                    let distance_to_the_player = pos.distance(&player_pos);
+
+                    if distance_to_the_player < MONSTER_SEE_DISTANCE {
+                        let (delta_x, delta_y) = pos.into_direction(&player_pos);
+                        (-delta_x, -delta_y)
+                    } else {
+                        (0, 0)
+                    }
+                }
+            };
 
             let new_x = pos.x + delta_x;
             let new_y = pos.y + delta_y;
@@ -55,6 +101,11 @@ impl MonsterSystem {
                 .iter()
                 .filter(|(i_other, _)| *i_other != i)
                 .any(|(_, pos)| pos.x == new_x && pos.y == new_y);
+
+            if player_collision {
+                // Killing player.
+                return true;
+            }
 
             let out_of_width = !(0 <= new_x && new_x < world_tile_map.width as i64);
             let out_of_height = !(0 <= new_y && new_y < world_tile_map.height as i64);
@@ -71,6 +122,7 @@ impl MonsterSystem {
                 pos.y = new_y;
             }
         }
+        false
     }
 }
 
@@ -89,8 +141,18 @@ impl<'a> specs::System<'a> for MonsterSystem {
     ) {
         if game_flow.state == GameState::Running(crate::flow::RunningState::MobsTurn) {
             let world_map = &world_tile_map;
-            Self::try_move_monsters(world_map, &players, &monsters, &mut positions);
-            game_flow.state = GameState::Running(crate::flow::RunningState::PlayerTurn)
+            let player_is_killed = Self::try_move_monsters(
+                world_map,
+                &players,
+                &monsters,
+                &mut positions,
+                &mut game_flow,
+            );
+            if player_is_killed {
+                game_flow.state = GameState::Finished
+            } else {
+                game_flow.state = GameState::Running(crate::flow::RunningState::PlayerTurn)
+            }
         }
     }
 }
@@ -148,10 +210,12 @@ pub fn register(dispatcher: &mut DispatcherBuilder, world: &mut World) -> anyhow
             find_creature_spawn_position(&tile_map, &mut creatures_positions)?
         };
 
+        let strategy: MobStrategy = rand::random();
+
         world
             .create_entity()
             .with(monster_spawn_position)
-            .with(Monster {})
+            .with(Monster { strategy })
             .build();
     }
 

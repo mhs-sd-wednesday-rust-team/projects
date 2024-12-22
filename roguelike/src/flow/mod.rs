@@ -102,7 +102,7 @@ impl<'a> specs::System<'a> for DummyFlowSystem {
                         }
                     }
                     GameState::Finished => {
-                        let map = generate_map();
+                        let map: mapgen::MapBuffer = generate_map();
                         tile_map.set_map(&map);
 
                         // TODO: Recreate player and monsters entities instead of
