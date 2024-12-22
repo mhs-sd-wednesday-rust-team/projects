@@ -9,8 +9,6 @@ use crate::components::CombatStats;
 use crate::components::Position;
 use crate::flow::{GameFlow, GameState};
 use crate::player::Player;
-use anyhow::anyhow;
-use rand::seq::IteratorRandom;
 
 pub mod view;
 
