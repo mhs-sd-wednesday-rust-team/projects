@@ -22,6 +22,39 @@ enum MobStrategy {
     Coward,
 }
 
+impl MobStrategy {
+    fn find_deltas(&self, pos: &Position, player_pos: &Position) -> (i64, i64) {
+        match self {
+            MobStrategy::Random => {
+                let deltas = [-1, 0, 1];
+                let mut rng = rand::thread_rng();
+                let delta_x = *deltas.choose(&mut rng).expect("Delta must exist.");
+                let delta_y = *deltas.choose(&mut rng).expect("Delta must exist.");
+                (delta_x, delta_y)
+            }
+            MobStrategy::Aggressive => {
+                let distance_to_the_player = pos.distance(player_pos);
+
+                if distance_to_the_player < MONSTER_SEE_DISTANCE {
+                    pos.find_direction(player_pos)
+                } else {
+                    (0, 0)
+                }
+            }
+            MobStrategy::Coward => {
+                let distance_to_the_player = pos.distance(player_pos);
+
+                if distance_to_the_player < MONSTER_SEE_DISTANCE {
+                    let (delta_x, delta_y) = pos.find_direction(player_pos);
+                    (-delta_x, -delta_y)
+                } else {
+                    (0, 0)
+                }
+            }
+        }
+    }
+}
+
 impl Distribution<MobStrategy> for Standard {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> MobStrategy {
         match rng.gen_range(0..3) {
@@ -69,34 +102,7 @@ impl MonsterSystem {
             if !monster.is_alive {
                 continue;
             }
-            let (delta_x, delta_y) = match monster.strategy {
-                MobStrategy::Random => {
-                    let deltas = [-1, 0, 1];
-                    let mut rng = rand::thread_rng();
-                    let delta_x = *deltas.choose(&mut rng).expect("Delta must exist.");
-                    let delta_y = *deltas.choose(&mut rng).expect("Delta must exist.");
-                    (delta_x, delta_y)
-                }
-                MobStrategy::Aggressive => {
-                    let distance_to_the_player = pos.distance(&player_pos);
-
-                    if distance_to_the_player < MONSTER_SEE_DISTANCE {
-                        pos.find_direction(&player_pos)
-                    } else {
-                        (0, 0)
-                    }
-                }
-                MobStrategy::Coward => {
-                    let distance_to_the_player = pos.distance(&player_pos);
-
-                    if distance_to_the_player < MONSTER_SEE_DISTANCE {
-                        let (delta_x, delta_y) = pos.find_direction(&player_pos);
-                        (-delta_x, -delta_y)
-                    } else {
-                        (0, 0)
-                    }
-                }
-            };
+            let (delta_x, delta_y) = monster.strategy.find_deltas(pos, &player_pos);
 
             let new_x = pos.x + delta_x;
             let new_y = pos.y + delta_y;
