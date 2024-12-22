@@ -19,8 +19,7 @@ use crate::{
 
 pub mod view;
 
-#[derive(Component)]
-#[allow(dead_code)]
+#[derive(Component, Clone)]
 pub struct CombatStats {
     pub max_hp: i64,
     pub hp: i64,
@@ -57,7 +56,6 @@ pub enum CombatState {
 }
 
 impl CombatStats {
-    #[allow(dead_code)]
     pub fn hp_ratio(&self) -> f64 {
         self.hp as f64 / self.max_hp as f64
     }

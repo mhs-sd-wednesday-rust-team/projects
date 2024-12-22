@@ -11,11 +11,13 @@ use crate::flow::{GameFlow, GameState};
 use crate::player::Player;
 use crate::turn::Turn;
 
+pub mod split_ability;
 pub mod view;
 
 pub const DEFAULT_MONSTERS_NUMBER: usize = 10;
 pub const MONSTER_SEE_DISTANCE: i64 = 10;
 
+#[derive(Clone, Copy)]
 pub enum MobStrategy {
     Random,
     Aggressive,
@@ -65,7 +67,7 @@ impl Distribution<MobStrategy> for Standard {
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Clone, Copy)]
 pub struct Monster {
     pub strategy: MobStrategy,
 }
@@ -164,6 +166,9 @@ pub fn register(dispatcher: &mut DispatcherBuilder, world: &mut World) -> anyhow
     world.register::<Monster>();
 
     dispatcher.add(MonsterSystem, "monster_move_system", &[]);
+
+    split_ability::register(dispatcher, world)?;
+
     Ok(())
 }
 

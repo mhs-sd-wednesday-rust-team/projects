@@ -5,6 +5,7 @@ use specs::{DispatcherBuilder, World};
 use crate::combat::CombatStats;
 use crate::experience::{Experience, KillExperience};
 use crate::items::{find_item_spawn_position, DEFAULT_POTIONS_NUMBER, DEFAULT_WEAPON_NUMBER};
+use crate::monster::split_ability::SplitMonsterAbility;
 use crate::monster::{find_creature_spawn_position, MobStrategy, Monster, DEFAULT_MONSTERS_NUMBER};
 use crate::turn::Turn;
 use crate::{
@@ -68,6 +69,7 @@ impl<'a> specs::System<'a> for DummyFlowSystem {
         specs::WriteStorage<'a, CombatStats>,
         specs::WriteStorage<'a, Experience>,
         specs::WriteStorage<'a, KillExperience>,
+        specs::WriteStorage<'a, SplitMonsterAbility>,
     );
 
     fn run(
@@ -84,6 +86,7 @@ impl<'a> specs::System<'a> for DummyFlowSystem {
             mut stats,
             mut experiences,
             mut kill_experiences,
+            mut split_abilities,
         ): Self::SystemData,
     ) {
         for event in term_events.0.iter() {
@@ -164,6 +167,9 @@ impl<'a> specs::System<'a> for DummyFlowSystem {
                                 .unwrap();
                             kill_experiences
                                 .insert(monster_entity, KillExperience::new(50))
+                                .unwrap();
+                            split_abilities
+                                .insert(monster_entity, SplitMonsterAbility::new(2))
                                 .unwrap();
                         }
                     }
