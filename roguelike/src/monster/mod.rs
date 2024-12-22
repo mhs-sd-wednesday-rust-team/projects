@@ -3,6 +3,7 @@ use rand::seq::SliceRandom;
 use rand::Rng;
 use specs::prelude::*;
 use specs::Component;
+use split_ability::SplitMonsterAbility;
 
 use crate::board::tile::Tile;
 use crate::board::WorldTileMap;
@@ -11,11 +12,14 @@ use crate::components::Position;
 use crate::flow::{GameFlow, GameState};
 use crate::player::Player;
 
+pub mod end_mob_turn;
+pub mod split_ability;
 pub mod view;
 
 pub const DEFAULT_MONSTERS_NUMBER: usize = 10;
 pub const MONSTER_SEE_DISTANCE: i64 = 10;
 
+#[derive(Clone, Copy)]
 enum MobStrategy {
     Random,
     Aggressive,
@@ -65,7 +69,7 @@ impl Distribution<MobStrategy> for Standard {
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Clone, Copy)]
 pub struct Monster {
     // Workaround for lazy entities deleting.
     // Saying that we should skip this entity handling.
@@ -156,8 +160,6 @@ impl<'a> specs::System<'a> for MonsterSystem {
                 Self::try_move_monsters(world_map, &players, &monsters, &mut positions);
             if player_is_killed {
                 game_flow.state = GameState::Finished
-            } else {
-                game_flow.state = GameState::Running(crate::flow::RunningState::PlayerTurn)
             }
         }
     }
@@ -225,6 +227,7 @@ pub fn register(dispatcher: &mut DispatcherBuilder, world: &mut World) -> anyhow
                 strategy,
                 is_alive: true,
             })
+            .with(SplitMonsterAbility::new(2))
             .build();
     }
 
