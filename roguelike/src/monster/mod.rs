@@ -266,7 +266,7 @@ mod tests {
         monster.strategy = MobStrategy::Aggressive;
         for (monster_pos, expected_delta) in coward_monster_pos_to_expected_delta.iter() {
             let expected_delta = (-expected_delta.0, -expected_delta.1);
-            let actual_delta = monster.strategy.find_deltas(&monster_pos, &player_pos);
+            let actual_delta = monster.strategy.find_deltas(monster_pos, &player_pos);
             assert_eq!(expected_delta, actual_delta);
         }
     }
