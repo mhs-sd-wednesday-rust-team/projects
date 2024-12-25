@@ -5,6 +5,7 @@ use ratatui::{
     text::{Span, Text},
 };
 
+#[derive(Default)]
 pub struct PotionView<'a> {
     pub tag: PhantomData<&'a ()>,
     // some stats that affect view

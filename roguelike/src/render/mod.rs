@@ -1,7 +1,7 @@
 use specs::{prelude::ResourceId, DispatcherBuilder, Join, SystemData, World};
 
 use crate::{
-    board::WorldTileMap,
+    board::{view::board::BoardView, WorldTileMap},
     components::Position,
     experience::Experience,
     flow::{
@@ -42,28 +42,23 @@ impl<'a> specs::System<'a> for RenderSystem {
                         frame.render_widget(GameView::Finish(FinishMenuView), area)
                     }
                     GameState::Running(_) => {
-                        let (_, player_pos, player_exp) =
-                            (&data.player, &data.pos, &data.experience)
-                                .join()
-                                .next()
-                                .expect("should be a player");
+                        let (_, player_exp) = (&data.player, &data.experience)
+                            .join()
+                            .next()
+                            .expect("should be a player");
 
-                        let monsters: Vec<&Position> = (&data.pos, &data.monsters)
-                            .join()
-                            .map(|(pos, _)| pos)
-                            .collect();
-                        let potions: Vec<&Position> = (&data.pos, &data.potions)
-                            .join()
-                            .map(|(pos, _)| pos)
-                            .collect();
+                        let board = BoardView::new(
+                            data.map,
+                            data.pos,
+                            data.player,
+                            data.monsters,
+                            data.potions,
+                        );
 
                         frame.render_widget(
                             GameView::Play(PlayView {
-                                map: &data.map,
-                                player: player_pos,
+                                board,
                                 player_experience: player_exp,
-                                monsters,
-                                potions,
                                 level: &data.game_flow.level,
                             }),
                             area,

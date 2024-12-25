@@ -4,19 +4,15 @@ use ratatui::{
 };
 
 use crate::{
-    board::{view::board::BoardView, WorldTileMap},
-    components::Position,
+    board::view::board::BoardView,
     experience::{view::bar::ExperienceBarView, Experience},
     flow::Level,
 };
 
 pub struct PlayView<'a> {
     pub level: &'a Level,
-    pub map: &'a WorldTileMap,
-    pub player: &'a Position,
     pub player_experience: &'a Experience,
-    pub monsters: Vec<&'a Position>,
-    pub potions: Vec<&'a Position>,
+    pub board: BoardView<'a>,
 }
 
 impl<'a> Widget for PlayView<'a> {
@@ -39,13 +35,7 @@ impl<'a> Widget for PlayView<'a> {
             .constraints(vec![Constraint::Fill(1), Constraint::Length(4)])
             .split(center_area);
 
-        BoardView {
-            map: self.map,
-            player_pos: self.player,
-            monsters_pos: self.monsters,
-            potion_pos: self.potions,
-        }
-        .render(layout[0], buf);
+        self.board.render(layout[0], buf);
 
         let hud_layout = Layout::default()
             .direction(Direction::Horizontal)
