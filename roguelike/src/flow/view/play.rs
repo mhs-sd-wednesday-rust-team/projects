@@ -6,6 +6,7 @@ use ratatui::{
 use crate::{
     board::{view::board::BoardView, WorldTileMap},
     components::Position,
+    experience::{view::bar::ExperienceBarView, Experience},
     flow::Level,
 };
 
@@ -13,6 +14,7 @@ pub struct PlayView<'a> {
     pub level: &'a Level,
     pub map: &'a WorldTileMap,
     pub player: &'a Position,
+    pub player_experience: &'a Experience,
     pub monsters: Vec<&'a Position>,
     pub potions: Vec<&'a Position>,
 }
@@ -34,7 +36,7 @@ impl<'a> Widget for PlayView<'a> {
 
         let layout = Layout::default()
             .direction(Direction::Vertical)
-            .constraints(vec![Constraint::Fill(1), Constraint::Length(2)])
+            .constraints(vec![Constraint::Fill(1), Constraint::Length(4)])
             .split(center_area);
 
         BoardView {
@@ -44,7 +46,23 @@ impl<'a> Widget for PlayView<'a> {
             potion_pos: self.potions,
         }
         .render(layout[0], buf);
+
+        let hud_layout = Layout::default()
+            .direction(Direction::Horizontal)
+            .horizontal_margin(16)
+            .constraints(vec![
+                Constraint::Length(ExperienceBarView::MIN_LEN),
+                Constraint::Fill(1),
+                Constraint::Length(100),
+            ])
+            .split(layout[1]);
+
+        ExperienceBarView {
+            experience: self.player_experience,
+        }
+        .render(hud_layout[0], buf);
+
         Paragraph::new("move with `arrows` or (`h`,`j`,`k`,`l`); simulate death with `d`")
-            .render(layout[1], buf);
+            .render(hud_layout[2], buf);
     }
 }

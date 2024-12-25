@@ -8,6 +8,7 @@ use crate::board::tile::Tile;
 use crate::board::WorldTileMap;
 use crate::components::CombatStats;
 use crate::components::Position;
+use crate::experience::Experience;
 use crate::flow::{GameFlow, GameState};
 use crate::player::Player;
 
@@ -204,6 +205,10 @@ pub fn register(dispatcher: &mut DispatcherBuilder, world: &mut World) -> anyhow
             hp: 30,
             defense: 2,
             power: 5,
+        })
+        .with(Experience {
+            level: 3,
+            exp_count: 74,
         })
         .build();
 

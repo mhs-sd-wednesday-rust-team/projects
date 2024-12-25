@@ -1,5 +1,7 @@
 use specs::{Component, DenseVecStorage, DispatcherBuilder, Join, World, WorldExt};
 
+pub mod view;
+
 #[derive(Component, Clone, Debug, Default, PartialEq, Eq)]
 pub struct Experience {
     pub level: usize,
@@ -8,13 +10,11 @@ pub struct Experience {
 
 impl Experience {
     pub fn max_exp(&self) -> usize {
-        dbg!(self.level);
-        dbg!(100.0_f64.powf(1.0 + self.level as f64 * 0.01) as usize)
+        100.0_f64.powf(1.0 + self.level as f64 * 0.01) as usize
     }
 
-    #[allow(dead_code)]
-    pub fn exp_percent(&self) -> f64 {
-        self.exp_count as f64 / self.max_exp() as f64 * 100.0
+    pub fn exp_ratio(&self) -> f64 {
+        self.exp_count as f64 / self.max_exp() as f64
     }
 
     pub fn up(&mut self, gain: GainExperience) {

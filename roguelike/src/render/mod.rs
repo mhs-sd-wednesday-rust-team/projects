@@ -3,6 +3,7 @@ use specs::{prelude::ResourceId, DispatcherBuilder, Join, SystemData, World};
 use crate::{
     board::WorldTileMap,
     components::Position,
+    experience::Experience,
     flow::{
         view::{FinishMenuView, GameView, PlayView, StartMenuView},
         GameFlow, GameState,
@@ -24,6 +25,7 @@ struct RenderSystemData<'a> {
     player: specs::ReadStorage<'a, Player>,
     monsters: specs::ReadStorage<'a, Monster>,
     potions: specs::ReadStorage<'a, Potion>,
+    experience: specs::ReadStorage<'a, Experience>,
 }
 
 impl<'a> specs::System<'a> for RenderSystem {
@@ -40,28 +42,32 @@ impl<'a> specs::System<'a> for RenderSystem {
                         frame.render_widget(GameView::Finish(FinishMenuView), area)
                     }
                     GameState::Running(_) => {
-                        let player = (&data.pos, &data.player).join().next();
-                        if let Some((player_pos, _)) = player {
-                            let monsters: Vec<&Position> = (&data.pos, &data.monsters)
+                        let (_, player_pos, player_exp) =
+                            (&data.player, &data.pos, &data.experience)
                                 .join()
-                                .map(|(pos, _)| pos)
-                                .collect();
-                            let potions: Vec<&Position> = (&data.pos, &data.potions)
-                                .join()
-                                .map(|(pos, _)| pos)
-                                .collect();
+                                .next()
+                                .expect("should be a player");
 
-                            frame.render_widget(
-                                GameView::Play(PlayView {
-                                    map: &data.map,
-                                    player: player_pos,
-                                    monsters,
-                                    potions,
-                                    level: &data.game_flow.level,
-                                }),
-                                area,
-                            )
-                        }
+                        let monsters: Vec<&Position> = (&data.pos, &data.monsters)
+                            .join()
+                            .map(|(pos, _)| pos)
+                            .collect();
+                        let potions: Vec<&Position> = (&data.pos, &data.potions)
+                            .join()
+                            .map(|(pos, _)| pos)
+                            .collect();
+
+                        frame.render_widget(
+                            GameView::Play(PlayView {
+                                map: &data.map,
+                                player: player_pos,
+                                player_experience: player_exp,
+                                monsters,
+                                potions,
+                                level: &data.game_flow.level,
+                            }),
+                            area,
+                        )
                     }
                     GameState::Exit => {}
                 };
