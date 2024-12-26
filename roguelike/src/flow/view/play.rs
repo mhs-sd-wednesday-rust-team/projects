@@ -1,17 +1,20 @@
 use ratatui::{
-    layout::{Constraint, Direction, Layout},
+    layout::{Constraint, Direction, Flex, Layout},
     widgets::{Block, Paragraph, Widget},
 };
 
 use crate::{
-    board::{position::Position, view::board::BoardView, WorldTileMap},
+    board::view::board::BoardView,
+    combat::{view::bar::CombatBarView, CombatStats},
+    experience::{view::bar::ExperienceBarView, Experience},
     flow::Level,
 };
 
 pub struct PlayView<'a> {
     pub level: &'a Level,
-    pub map: &'a WorldTileMap,
-    pub player: &'a Position,
+    pub player_experience: &'a Experience,
+    pub player_stats: &'a CombatStats,
+    pub board: BoardView<'a>,
 }
 
 impl<'a> Widget for PlayView<'a> {
@@ -31,15 +34,44 @@ impl<'a> Widget for PlayView<'a> {
 
         let layout = Layout::default()
             .direction(Direction::Vertical)
-            .constraints(vec![Constraint::Fill(1), Constraint::Length(2)])
+            .constraints(vec![
+                Constraint::Fill(1),
+                Constraint::Length(2),
+                Constraint::Length(2),
+            ])
+            .flex(Flex::Center)
             .split(center_area);
 
-        BoardView {
-            map: self.map,
-            player_pos: self.player,
+        self.board.render(layout[0], buf);
+
+        let hud_layout = Layout::default()
+            .direction(Direction::Horizontal)
+            .horizontal_margin(16)
+            .constraints(vec![
+                Constraint::Length(ExperienceBarView::MIN_LEN),
+                Constraint::Length(1),
+                Constraint::Length(CombatBarView::MIN_LEN),
+                Constraint::Fill(1),
+            ])
+            .split(layout[1]);
+
+        ExperienceBarView {
+            experience: self.player_experience,
         }
-        .render(layout[0], buf);
+        .render(hud_layout[0], buf);
+
+        CombatBarView {
+            stats: self.player_stats,
+        }
+        .render(hud_layout[2], buf);
+
+        let hint_layout = Layout::default()
+            .direction(Direction::Horizontal)
+            .horizontal_margin(16)
+            .constraints(vec![Constraint::Fill(1)])
+            .split(layout[2]);
+
         Paragraph::new("move with `arrows` or (`h`,`j`,`k`,`l`); simulate death with `d`")
-            .render(layout[1], buf);
+            .render(hint_layout[0], buf);
     }
 }

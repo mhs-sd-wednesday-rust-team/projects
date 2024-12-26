@@ -9,23 +9,23 @@ use crate::board::tile::{Biome, Tile};
 pub trait TileView<'a>: Into<Text<'a>> {}
 
 #[derive(Clone)]
-pub struct WorldTile<'a> {
-    pub tile: &'a Tile,
-    pub biome: &'a Biome,
+pub struct WorldTile {
+    pub tile: Tile,
+    pub biome: Biome,
 }
 
-impl<'a> From<WorldTile<'a>> for Text<'a> {
-    fn from(value: WorldTile<'a>) -> Self {
+impl<'a> From<WorldTile> for Text<'a> {
+    fn from(value: WorldTile) -> Self {
         let (glyph, bg, fg) = match value.tile {
             Tile::Wall => match value.biome {
-                Biome::Ocean => ("@", Color::LightBlue, Color::Red),
-                Biome::Beach => ("$", Color::LightYellow, Color::Black),
-                Biome::Castle => ("#", Color::Black, Color::White),
+                Biome::Ocean => ("@@", Color::LightBlue, Color::Red),
+                Biome::Beach => ("$$", Color::LightYellow, Color::Black),
+                Biome::Castle => ("##", Color::Black, Color::White),
             },
             Tile::Ground => match value.biome {
-                Biome::Ocean => ("%", Color::LightBlue, Color::Blue),
-                Biome::Beach => ("#", Color::LightYellow, Color::Yellow),
-                Biome::Castle => (".", Color::Black, Color::Gray),
+                Biome::Ocean => ("%%", Color::LightBlue, Color::Blue),
+                Biome::Beach => ("##", Color::LightYellow, Color::Yellow),
+                Biome::Castle => ("..", Color::Black, Color::Gray),
             },
         };
 

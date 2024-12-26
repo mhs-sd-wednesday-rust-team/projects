@@ -1,13 +1,13 @@
+use crate::components::Position;
 use generator::generate_map;
 use mapgen::MapBuffer;
-use position::Position;
+
 use specs::{DispatcherBuilder, World, WorldExt};
 use tile::Tile;
 
 use self::tile::Biome;
 
 pub mod generator;
-pub mod position;
 pub mod tile;
 pub mod view;
 
@@ -55,7 +55,7 @@ impl Default for WorldTileMap {
 }
 
 const BOARD_HEIGHT: usize = 50;
-const BOARD_WIDTH: usize = 140;
+const BOARD_WIDTH: usize = 80;
 
 pub fn register(_: &mut DispatcherBuilder, world: &mut World) -> anyhow::Result<()> {
     world.register::<Position>();
