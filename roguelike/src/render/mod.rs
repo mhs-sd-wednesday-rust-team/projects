@@ -2,6 +2,7 @@ use specs::{prelude::ResourceId, DispatcherBuilder, Join, SystemData, World};
 
 use crate::{
     board::{view::board::BoardView, WorldTileMap},
+    combat::CombatStats,
     components::Position,
     experience::Experience,
     flow::{
@@ -24,6 +25,7 @@ struct RenderSystemData<'a> {
     pos: specs::ReadStorage<'a, Position>,
     player: specs::ReadStorage<'a, Player>,
     monsters: specs::ReadStorage<'a, Monster>,
+    stats: specs::ReadStorage<'a, CombatStats>,
     potions: specs::ReadStorage<'a, Potion>,
     experience: specs::ReadStorage<'a, Experience>,
 }
@@ -52,6 +54,7 @@ impl<'a> specs::System<'a> for RenderSystem {
                             data.pos,
                             data.player,
                             data.monsters,
+                            data.stats,
                             data.potions,
                         );
 

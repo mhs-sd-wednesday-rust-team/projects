@@ -227,6 +227,12 @@ pub fn register(dispatcher: &mut DispatcherBuilder, world: &mut World) -> anyhow
                 strategy,
                 is_alive: true,
             })
+            .with(CombatStats {
+                max_hp: 10,
+                hp: 10,
+                defense: 1,
+                power: 5,
+            })
             .build();
     }
 
