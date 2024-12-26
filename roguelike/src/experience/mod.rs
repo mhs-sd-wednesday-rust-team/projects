@@ -90,7 +90,7 @@ pub fn register(dispatcher: &mut DispatcherBuilder, world: &mut World) -> anyhow
 
 #[cfg(test)]
 mod tests {
-    use specs::Builder;
+    use specs::{Builder, System};
 
     use super::*;
 
@@ -175,6 +175,14 @@ mod tests {
     fn test_system() {
         let mut world = World::new();
         let mut dispatcher_builder = DispatcherBuilder::new();
+
+        struct Dummy;
+        impl<'a> System<'a> for Dummy {
+            type SystemData = ();
+            fn run(&mut self, _: Self::SystemData) {}
+        }
+
+        dispatcher_builder.add(Dummy, "death_system", &[]);
 
         register(&mut dispatcher_builder, &mut world).unwrap();
 
