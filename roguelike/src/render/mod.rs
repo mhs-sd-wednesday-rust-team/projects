@@ -43,7 +43,7 @@ impl<'a> specs::System<'a> for RenderSystem {
                     GameState::Finished => {
                         frame.render_widget(GameView::Finish(FinishMenuView), area)
                     }
-                    GameState::Running(_) => {
+                    GameState::Running => {
                         let (_, player_exp) = (&data.player, &data.experience)
                             .join()
                             .next()

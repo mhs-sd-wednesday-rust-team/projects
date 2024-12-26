@@ -9,9 +9,6 @@ pub struct CombatStats {
     pub power: i64,
 }
 
-#[derive(Component)]
-pub enum CombatState {}
-
 impl CombatStats {
     #[allow(dead_code)]
     pub fn hp_ratio(&self) -> f64 {

@@ -6,7 +6,6 @@ use crate::board::tile::Tile;
 use crate::board::WorldTileMap;
 use crate::combat::CombatStats;
 use crate::components::Position;
-use crate::flow::{GameFlow, GameState};
 use crate::monster::Monster;
 use crate::term::TermEvents;
 
@@ -86,7 +85,6 @@ impl<'a> specs::System<'a> for PlayerMoveSystem {
         specs::WriteStorage<'a, Monster>,
         specs::Read<'a, TermEvents>,
         specs::Read<'a, WorldTileMap>,
-        specs::Write<'a, GameFlow>,
     );
 
     fn run(
@@ -98,7 +96,6 @@ impl<'a> specs::System<'a> for PlayerMoveSystem {
             mut monsters,
             term_events,
             world_tile_map,
-            mut game_flow,
         ): Self::SystemData,
     ) {
         let world_map = &world_tile_map;
@@ -114,7 +111,7 @@ impl<'a> specs::System<'a> for PlayerMoveSystem {
                     };
 
                     if let Some((delta_x, delta_y)) = deltas {
-                        let moved = Self::try_move_player(
+                        Self::try_move_player(
                             world_map,
                             &entities,
                             &players,
@@ -123,10 +120,6 @@ impl<'a> specs::System<'a> for PlayerMoveSystem {
                             delta_x,
                             delta_y,
                         );
-                        if moved {
-                            game_flow.state =
-                                GameState::Running(crate::flow::RunningState::MobsTurn)
-                        }
                     }
                 }
             }

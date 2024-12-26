@@ -4,6 +4,7 @@ use specs::{DispatcherBuilder, World};
 
 use crate::items::{find_item_spawn_position, DEFAULT_POTIONS_NUMBER, DEFAULT_WEAPON_NUMBER};
 use crate::monster::{find_creature_spawn_position, Monster, DEFAULT_MONSTERS_NUMBER};
+use crate::turn::Turn;
 use crate::{
     board::{generator::generate_map, WorldTileMap},
     components::Position,
@@ -14,15 +15,9 @@ use crate::{
 pub mod view;
 
 #[derive(PartialEq, Eq)]
-pub enum RunningState {
-    PlayerTurn,
-    MobsTurn,
-}
-
-#[derive(PartialEq, Eq)]
 pub enum GameState {
     Start,
-    Running(RunningState),
+    Running,
     Finished,
     Exit,
 }
@@ -61,6 +56,7 @@ impl<'a> specs::System<'a> for DummyFlowSystem {
     type SystemData = (
         specs::Read<'a, TermEvents>,
         specs::Write<'a, GameFlow>,
+        specs::Write<'a, Turn>,
         specs::Write<'a, WorldTileMap>,
         specs::WriteStorage<'a, Position>,
         specs::WriteStorage<'a, Player>,
@@ -72,6 +68,7 @@ impl<'a> specs::System<'a> for DummyFlowSystem {
         (
             term_events,
             mut game_flow,
+            mut turn,
             mut tile_map,
             mut positions,
             players,
@@ -91,9 +88,10 @@ impl<'a> specs::System<'a> for DummyFlowSystem {
 
                 match game_flow.state {
                     GameState::Start => {
-                        game_flow.state = GameState::Running(RunningState::PlayerTurn)
+                        game_flow.state = GameState::Running;
+                        *turn = Turn::Player;
                     }
-                    GameState::Running(_) => {
+                    GameState::Running => {
                         // FIXME: mock switch to "death".
                         if k.code == KeyCode::Char('d') {
                             game_flow.state = GameState::Finished;
@@ -143,7 +141,8 @@ impl<'a> specs::System<'a> for DummyFlowSystem {
 
                         // TODO: Should also reinitialize stats and update monsters.
 
-                        game_flow.state = GameState::Running(RunningState::PlayerTurn)
+                        game_flow.state = GameState::Running;
+                        *turn = Turn::Player;
                     }
                     GameState::Exit => {}
                 }

@@ -13,6 +13,7 @@ mod monster;
 mod player;
 mod render;
 mod term;
+mod turn;
 
 fn main() -> Result<()> {
     let mut world = World::new();
@@ -24,6 +25,7 @@ fn main() -> Result<()> {
     experience::register(&mut dispatcher_builder, &mut world).unwrap();
     player::register(&mut dispatcher_builder, &mut world).unwrap();
     monster::register(&mut dispatcher_builder, &mut world).unwrap();
+    turn::register(&mut dispatcher_builder, &mut world).unwrap();
     flow::register(&mut dispatcher_builder, &mut world).unwrap();
     render::register(&mut dispatcher_builder, &mut world).unwrap();
 

@@ -11,6 +11,7 @@ use crate::components::Position;
 use crate::experience::Experience;
 use crate::flow::{GameFlow, GameState};
 use crate::player::Player;
+use crate::turn::Turn;
 
 pub mod view;
 
@@ -144,21 +145,20 @@ impl<'a> specs::System<'a> for MonsterSystem {
         specs::WriteStorage<'a, Player>,
         specs::WriteStorage<'a, Monster>,
         specs::Read<'a, WorldTileMap>,
+        specs::Read<'a, Turn>,
         specs::Write<'a, GameFlow>,
     );
 
     fn run(
         &mut self,
-        (mut positions, players, monsters, world_tile_map, mut game_flow): Self::SystemData,
+        (mut positions, players, monsters, world_tile_map, turn, mut game_flow): Self::SystemData,
     ) {
-        if game_flow.state == GameState::Running(crate::flow::RunningState::MobsTurn) {
+        if *turn == Turn::Game {
             let world_map = &world_tile_map;
             let player_is_killed =
                 Self::try_move_monsters(world_map, &players, &monsters, &mut positions);
             if player_is_killed {
                 game_flow.state = GameState::Finished
-            } else {
-                game_flow.state = GameState::Running(crate::flow::RunningState::PlayerTurn)
             }
         }
     }
