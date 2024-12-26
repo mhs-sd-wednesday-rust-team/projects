@@ -1,4 +1,7 @@
-use std::ops::DerefMut;
+use std::{
+    ops::DerefMut,
+    time::{Duration, Instant},
+};
 
 use rand::{thread_rng, Rng};
 use specs::{
@@ -32,14 +35,17 @@ pub enum CombatFlowState {
         attacker_score: i64,
         defending_score: i64,
     },
+    HpDiff {
+        defending_diff: i64,
+    },
 }
 
 #[derive(Clone)]
 pub struct CombatFlow {
-    attacker: Entity,
-    defending: Entity,
-    countdown: usize,
-    state: CombatFlowState,
+    pub attacker: Entity,
+    pub defending: Entity,
+    started: Instant,
+    pub state: CombatFlowState,
 }
 
 #[derive(Clone, Default)]
@@ -67,14 +73,14 @@ impl<'a> specs::System<'a> for CombatSystem {
         specs::WriteStorage<'a, Monster>,
         specs::WriteStorage<'a, CombatStats>,
         specs::ReadStorage<'a, Position>,
-        specs::Read<'a, GameFlow>,
+        specs::Write<'a, GameFlow>,
     );
 
     fn run(
         &mut self,
-        (entities, mut combat_state, turn, player, monsters, mut stats, positions, game_state): Self::SystemData,
+        (entities, mut combat_state, turn, player, monsters, mut stats, positions, mut game_state): Self::SystemData,
     ) {
-        let GameState::Running = game_state.state else {
+        let (GameState::Running | GameState::Combat) = game_state.state else {
             return;
         };
 
@@ -103,20 +109,18 @@ impl<'a> specs::System<'a> for CombatSystem {
                     *combat_state = CombatState::Combat(CombatFlow {
                         attacker,
                         defending,
-                        countdown: 8,
+                        started: Instant::now(),
                         state: CombatFlowState::Tossing,
                     });
+                    game_state.state = GameState::Combat;
                 }
             }
-            CombatState::Combat(CombatFlow { countdown, .. }) if *countdown > 0 => {
-                *countdown -= 1;
-            }
             CombatState::Combat(CombatFlow {
-                countdown,
+                started,
                 state,
                 attacker,
                 defending,
-            }) => match state {
+            }) if (Instant::now() - *started) > Duration::from_secs(1) => match state {
                 CombatFlowState::Tossing => {
                     let mut rng = thread_rng();
                     let attacker_score: i64 = rng.gen_range(0..=8);
@@ -125,7 +129,7 @@ impl<'a> specs::System<'a> for CombatSystem {
                         attacker_score,
                         defending_score,
                     };
-                    *countdown = 8;
+                    *started = Instant::now();
                 }
                 CombatFlowState::Tossed {
                     attacker_score,
@@ -137,14 +141,27 @@ impl<'a> specs::System<'a> for CombatSystem {
                     let attack = *attacker_score + attacker_stats.power;
                     let defense = *defending_score + defending_stats.defense;
 
-                    if attack > defense {
-                        let defending_stats = stats.get_mut(*defending).unwrap();
-                        defending_stats.hp -= attack - defense;
-                    }
+                    let diff = if attack > defense {
+                        defense - attack
+                    } else {
+                        0
+                    };
+
+                    *state = CombatFlowState::HpDiff {
+                        defending_diff: diff,
+                    };
+                    *started = Instant::now();
+                }
+                CombatFlowState::HpDiff { defending_diff } => {
+                    let defending_stats = stats.get_mut(*defending).unwrap();
+
+                    defending_stats.hp += *defending_diff;
 
                     *combat_state = CombatState::NoCombat;
+                    game_state.state = GameState::Running;
                 }
             },
+            _ => {}
         };
     }
 }

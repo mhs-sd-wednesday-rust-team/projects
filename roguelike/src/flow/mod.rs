@@ -20,6 +20,7 @@ pub mod view;
 pub enum GameState {
     Start,
     Running,
+    Combat,
     Finished,
     Exit,
 }
@@ -161,7 +162,7 @@ impl<'a> specs::System<'a> for DummyFlowSystem {
                                 .unwrap();
                         }
                     }
-                    GameState::Running => {
+                    GameState::Running | GameState::Combat => {
                         // FIXME: mock switch to "death".
                         if k.code == KeyCode::Char('d') {
                             game_flow.state = GameState::Finished;
