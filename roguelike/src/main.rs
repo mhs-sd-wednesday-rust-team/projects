@@ -22,10 +22,10 @@ fn main() -> Result<()> {
     term::register(&mut dispatcher_builder, &mut world).unwrap();
     board::register(&mut dispatcher_builder, &mut world).unwrap();
     items::register(&mut dispatcher_builder, &mut world).unwrap();
-    experience::register(&mut dispatcher_builder, &mut world).unwrap();
     player::register(&mut dispatcher_builder, &mut world).unwrap();
     monster::register(&mut dispatcher_builder, &mut world).unwrap();
     combat::register(&mut dispatcher_builder, &mut world).unwrap();
+    experience::register(&mut dispatcher_builder, &mut world).unwrap();
     turn::register(&mut dispatcher_builder, &mut world).unwrap();
     flow::register(&mut dispatcher_builder, &mut world).unwrap();
     render::register(&mut dispatcher_builder, &mut world).unwrap();

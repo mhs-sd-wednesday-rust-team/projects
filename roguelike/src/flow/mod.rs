@@ -3,7 +3,7 @@ use specs::prelude::*;
 use specs::{DispatcherBuilder, World};
 
 use crate::combat::CombatStats;
-use crate::experience::Experience;
+use crate::experience::{Experience, KillExperience};
 use crate::items::{find_item_spawn_position, DEFAULT_POTIONS_NUMBER, DEFAULT_WEAPON_NUMBER};
 use crate::monster::{find_creature_spawn_position, MobStrategy, Monster, DEFAULT_MONSTERS_NUMBER};
 use crate::turn::Turn;
@@ -67,6 +67,7 @@ impl<'a> specs::System<'a> for DummyFlowSystem {
         specs::WriteStorage<'a, Monster>,
         specs::WriteStorage<'a, CombatStats>,
         specs::WriteStorage<'a, Experience>,
+        specs::WriteStorage<'a, KillExperience>,
     );
 
     fn run(
@@ -82,6 +83,7 @@ impl<'a> specs::System<'a> for DummyFlowSystem {
             mut monsters,
             mut stats,
             mut experiences,
+            mut kill_experiences,
         ): Self::SystemData,
     ) {
         for event in term_events.0.iter() {
@@ -159,6 +161,9 @@ impl<'a> specs::System<'a> for DummyFlowSystem {
                                         power: 5,
                                     },
                                 )
+                                .unwrap();
+                            kill_experiences
+                                .insert(monster_entity, KillExperience::new(50))
                                 .unwrap();
                         }
                     }

@@ -80,7 +80,11 @@ pub fn register(dispatcher: &mut DispatcherBuilder, world: &mut World) -> anyhow
     world.register::<GainExperience>();
     world.register::<KillExperience>();
 
-    dispatcher.add(GainExperienceSystem, "gain_experience_system", &[]);
+    dispatcher.add(
+        GainExperienceSystem,
+        "gain_experience_system",
+        &["death_system"],
+    );
     Ok(())
 }
 

@@ -10,6 +10,7 @@ use specs::{
 
 use crate::{
     components::Position,
+    experience::{GainExperience, KillExperience},
     flow::{GameFlow, GameState},
     monster::Monster,
     player::Player,
@@ -174,10 +175,19 @@ impl<'a> specs::System<'a> for DeathSystem {
         specs::ReadStorage<'a, Player>,
         specs::ReadStorage<'a, Monster>,
         specs::ReadStorage<'a, CombatStats>,
+        specs::ReadStorage<'a, KillExperience>,
+        specs::WriteStorage<'a, GainExperience>,
         specs::Write<'a, GameFlow>,
     );
 
-    fn run(&mut self, (entities, player, monsters, stats, mut game_flow): Self::SystemData) {
+    fn run(
+        &mut self,
+        (entities, player, monsters, stats, kill_experience, mut gain_experience, mut game_flow): Self::SystemData,
+    ) {
+        let (GameState::Running | GameState::Combat) = game_flow.state else {
+            return;
+        };
+
         for (player_stats, _) in (&stats, &player).join() {
             if player_stats.hp <= 0 {
                 game_flow.state = GameState::Finished;
@@ -185,8 +195,18 @@ impl<'a> specs::System<'a> for DeathSystem {
             }
         }
 
-        for (entity, entity_stats, _) in (&entities, &stats, &monsters).join() {
+        let (player_entity, _) = (&entities, &player).join().next().unwrap();
+
+        gain_experience
+            .insert(player_entity, GainExperience::new(0))
+            .unwrap();
+        for (entity, entity_stats, kill_exp, _) in
+            (&entities, &stats, &kill_experience, &monsters).join()
+        {
             if entity_stats.hp <= 0 {
+                let gain = gain_experience.get_mut(player_entity).unwrap();
+                gain.exp_count += GainExperience::from(kill_exp.clone()).exp_count;
+
                 entities
                     .delete(entity)
                     .expect("monster deletion should succeed");
