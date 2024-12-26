@@ -4,7 +4,8 @@ use specs::{Component, DenseVecStorage, DispatcherBuilder, World, WorldExt};
 
 use crate::board::tile::Tile;
 use crate::board::WorldTileMap;
-use crate::components::{CombatStats, Position};
+use crate::combat::CombatStats;
+use crate::components::Position;
 use crate::flow::{GameFlow, GameState};
 use crate::monster::Monster;
 use crate::term::TermEvents;

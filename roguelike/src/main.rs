@@ -4,6 +4,7 @@ use specs::{DispatcherBuilder, World, WorldExt};
 use std::io::Result;
 
 mod board;
+mod combat;
 mod components;
 mod experience;
 mod flow;

@@ -1,5 +1,5 @@
 use ratatui::{
-    layout::Constraint,
+    layout::{Constraint, Flex, Layout},
     style::Style,
     widgets::{Cell, Row, Table, Widget},
 };
@@ -62,8 +62,14 @@ impl<'a> Widget for BoardView<'a> {
     where
         Self: Sized,
     {
-        let widths = vec![Constraint::Length(1); self.width];
+        let [area] = Layout::horizontal([Constraint::Length(2 * self.width as u16)])
+            .flex(Flex::Center)
+            .areas(area);
+        let [area] = Layout::vertical([Constraint::Fill(self.board.len() as u16)])
+            .flex(Flex::Center)
+            .areas(area);
 
+        let widths = vec![Constraint::Length(2); self.width];
         Table::new(self.board, widths)
             .style(
                 Style::default()

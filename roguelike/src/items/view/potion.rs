@@ -13,7 +13,7 @@ pub struct PotionView<'a> {
 
 impl<'a> From<PotionView<'a>> for Text<'a> {
     fn from(_: PotionView<'a>) -> Self {
-        Span::raw("h")
+        Span::raw("🍔")
             .style(Style::default().fg(Color::LightMagenta).bg(Color::Black))
             .into()
     }

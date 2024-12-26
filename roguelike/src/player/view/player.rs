@@ -13,7 +13,7 @@ pub struct PlayerView<'a> {
 
 impl<'a> From<PlayerView<'a>> for Text<'a> {
     fn from(_: PlayerView<'a>) -> Self {
-        Span::raw("@")
+        Span::raw("🦀")
             .style(Style::default().fg(Color::LightYellow).bg(Color::Black))
             .into()
     }

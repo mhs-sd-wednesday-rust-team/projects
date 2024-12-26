@@ -28,15 +28,6 @@ impl Position {
     }
 }
 
-#[derive(Component)]
-#[allow(dead_code)]
-pub struct CombatStats {
-    pub max_hp: i64,
-    pub hp: i64,
-    pub defense: i64,
-    pub power: i64,
-}
-
 // #[derive(Component, Clone)]
 // pub struct InBackpack {
 //     pub owner: Entity,

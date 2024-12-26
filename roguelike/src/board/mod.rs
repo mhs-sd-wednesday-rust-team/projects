@@ -55,7 +55,7 @@ impl Default for WorldTileMap {
 }
 
 const BOARD_HEIGHT: usize = 50;
-const BOARD_WIDTH: usize = 140;
+const BOARD_WIDTH: usize = 80;
 
 pub fn register(_: &mut DispatcherBuilder, world: &mut World) -> anyhow::Result<()> {
     world.register::<Position>();

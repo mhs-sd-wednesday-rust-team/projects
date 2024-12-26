@@ -6,7 +6,7 @@ use specs::Component;
 
 use crate::board::tile::Tile;
 use crate::board::WorldTileMap;
-use crate::components::CombatStats;
+use crate::combat::CombatStats;
 use crate::components::Position;
 use crate::experience::Experience;
 use crate::flow::{GameFlow, GameState};
