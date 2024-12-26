@@ -6,9 +6,7 @@ use specs::Component;
 
 use crate::board::tile::Tile;
 use crate::board::WorldTileMap;
-use crate::combat::CombatStats;
 use crate::components::Position;
-use crate::experience::Experience;
 use crate::flow::{GameFlow, GameState};
 use crate::player::Player;
 use crate::turn::Turn;
@@ -18,7 +16,7 @@ pub mod view;
 pub const DEFAULT_MONSTERS_NUMBER: usize = 10;
 pub const MONSTER_SEE_DISTANCE: i64 = 10;
 
-enum MobStrategy {
+pub enum MobStrategy {
     Random,
     Aggressive,
     Coward,
@@ -69,10 +67,7 @@ impl Distribution<MobStrategy> for Standard {
 
 #[derive(Component)]
 pub struct Monster {
-    // Workaround for lazy entities deleting.
-    // Saying that we should skip this entity handling.
-    pub is_alive: bool,
-    strategy: MobStrategy,
+    pub strategy: MobStrategy,
 }
 
 struct MonsterSystem;
@@ -93,37 +88,16 @@ impl MonsterSystem {
             *pos
         };
 
-        let monsters_positions: Vec<(usize, Position)> =
-            (players, positions as &WriteStorage<'a, Position>)
-                .join()
-                .enumerate()
-                .map(|(i, (_, pos))| (i, *pos))
-                .collect();
-
-        for (i, (monster, pos)) in (monsters, positions).join().enumerate() {
-            if !monster.is_alive {
-                continue;
-            }
+        for (monster, pos) in (monsters, positions).join() {
             let (delta_x, delta_y) = monster.strategy.find_deltas(pos, &player_pos);
 
             let new_x = pos.x + delta_x;
             let new_y = pos.y + delta_y;
 
-            let player_collision = new_x == player_pos.x && new_y == player_pos.y;
-            let monsters_collision = monsters_positions
-                .iter()
-                .filter(|(i_other, _)| *i_other != i)
-                .any(|(_, pos)| pos.x == new_x && pos.y == new_y);
-
-            if player_collision {
-                // Killing player.
-                return true;
-            }
-
             let out_of_width = !(0 <= new_x && new_x < world_tile_map.width as i64);
             let out_of_height = !(0 <= new_y && new_y < world_tile_map.height as i64);
 
-            if out_of_width || out_of_height || player_collision || monsters_collision {
+            if out_of_width || out_of_height {
                 continue;
             }
 
@@ -146,20 +120,20 @@ impl<'a> specs::System<'a> for MonsterSystem {
         specs::WriteStorage<'a, Monster>,
         specs::Read<'a, WorldTileMap>,
         specs::Read<'a, Turn>,
-        specs::Write<'a, GameFlow>,
+        specs::Read<'a, GameFlow>,
     );
 
     fn run(
         &mut self,
-        (mut positions, players, monsters, world_tile_map, turn, mut game_flow): Self::SystemData,
+        (mut positions, players, monsters, world_tile_map, turn, game_flow): Self::SystemData,
     ) {
+        let GameState::Running = game_flow.state else {
+            return;
+        };
+
         if *turn == Turn::Game {
             let world_map = &world_tile_map;
-            let player_is_killed =
-                Self::try_move_monsters(world_map, &players, &monsters, &mut positions);
-            if player_is_killed {
-                game_flow.state = GameState::Finished
-            }
+            Self::try_move_monsters(world_map, &players, &monsters, &mut positions);
         }
     }
 }
@@ -189,54 +163,7 @@ pub fn find_creature_spawn_position(
 pub fn register(dispatcher: &mut DispatcherBuilder, world: &mut World) -> anyhow::Result<()> {
     world.register::<Monster>();
 
-    let mut creatures_positions = Vec::with_capacity(1 + DEFAULT_MONSTERS_NUMBER);
-
-    let player_spawn_position = {
-        let tile_map = world.read_resource::<WorldTileMap>();
-        find_creature_spawn_position(&tile_map, &mut creatures_positions)?
-    };
-
-    world
-        .create_entity()
-        .with(player_spawn_position)
-        .with(Player {})
-        .with(CombatStats {
-            max_hp: 30,
-            hp: 30,
-            defense: 2,
-            power: 5,
-        })
-        .with(Experience {
-            level: 3,
-            exp_count: 74,
-        })
-        .build();
-
-    for _ in 0..DEFAULT_MONSTERS_NUMBER {
-        let monster_spawn_position = {
-            let tile_map = world.read_resource::<WorldTileMap>();
-            find_creature_spawn_position(&tile_map, &mut creatures_positions)?
-        };
-
-        let strategy: MobStrategy = rand::random();
-
-        world
-            .create_entity()
-            .with(monster_spawn_position)
-            .with(Monster {
-                strategy,
-                is_alive: true,
-            })
-            .with(CombatStats {
-                max_hp: 10,
-                hp: 10,
-                defense: 1,
-                power: 5,
-            })
-            .build();
-    }
-
-    dispatcher.add(MonsterSystem, "monster_system", &["player_move_system"]);
+    dispatcher.add(MonsterSystem, "monster_move_system", &[]);
     Ok(())
 }
 
@@ -267,7 +194,6 @@ mod tests {
         ];
 
         let mut monster = Monster {
-            is_alive: true,
             strategy: MobStrategy::Coward,
         };
         for (monster_pos, expected_delta) in coward_monster_pos_to_expected_delta.iter() {

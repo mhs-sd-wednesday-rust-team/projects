@@ -33,10 +33,6 @@ impl<'a> specs::System<'a> for TurnSystem {
 
 pub fn register(dispatcher: &mut DispatcherBuilder, world: &mut World) -> anyhow::Result<()> {
     world.insert(Turn::Player);
-    dispatcher.add(
-        TurnSystem,
-        "turn_system",
-        &["player_move_system", "monster_system"],
-    );
+    dispatcher.add(TurnSystem, "turn_system", &["death_system"]);
     Ok(())
 }

@@ -2,8 +2,10 @@ use crossterm::event::{self, KeyCode};
 use specs::prelude::*;
 use specs::{DispatcherBuilder, World};
 
+use crate::combat::CombatStats;
+use crate::experience::Experience;
 use crate::items::{find_item_spawn_position, DEFAULT_POTIONS_NUMBER, DEFAULT_WEAPON_NUMBER};
-use crate::monster::{find_creature_spawn_position, Monster, DEFAULT_MONSTERS_NUMBER};
+use crate::monster::{find_creature_spawn_position, MobStrategy, Monster, DEFAULT_MONSTERS_NUMBER};
 use crate::turn::Turn;
 use crate::{
     board::{generator::generate_map, WorldTileMap},
@@ -54,6 +56,7 @@ struct DummyFlowSystem;
 
 impl<'a> specs::System<'a> for DummyFlowSystem {
     type SystemData = (
+        Entities<'a>,
         specs::Read<'a, TermEvents>,
         specs::Write<'a, GameFlow>,
         specs::Write<'a, Turn>,
@@ -61,18 +64,23 @@ impl<'a> specs::System<'a> for DummyFlowSystem {
         specs::WriteStorage<'a, Position>,
         specs::WriteStorage<'a, Player>,
         specs::WriteStorage<'a, Monster>,
+        specs::WriteStorage<'a, CombatStats>,
+        specs::WriteStorage<'a, Experience>,
     );
 
     fn run(
         &mut self,
         (
+            entities,
             term_events,
             mut game_flow,
             mut turn,
             mut tile_map,
             mut positions,
-            players,
-            monsters
+            mut players,
+            mut monsters,
+            mut stats,
+            mut experiences,
         ): Self::SystemData,
     ) {
         for event in term_events.0.iter() {
@@ -90,6 +98,68 @@ impl<'a> specs::System<'a> for DummyFlowSystem {
                     GameState::Start => {
                         game_flow.state = GameState::Running;
                         *turn = Turn::Player;
+
+                        let mut creatures_positions =
+                            Vec::with_capacity(1 + DEFAULT_MONSTERS_NUMBER);
+
+                        let player_spawn_position = {
+                            find_creature_spawn_position(&tile_map, &mut creatures_positions)
+                                .unwrap()
+                        };
+
+                        let player_entity = entities.create();
+                        players.insert(player_entity, Player {}).unwrap();
+                        positions
+                            .insert(player_entity, player_spawn_position)
+                            .unwrap();
+                        stats
+                            .insert(
+                                player_entity,
+                                CombatStats {
+                                    max_hp: 30,
+                                    hp: 30,
+                                    defense: 2,
+                                    power: 5,
+                                },
+                            )
+                            .unwrap();
+                        experiences
+                            .insert(
+                                player_entity,
+                                Experience {
+                                    level: 3,
+                                    exp_count: 74,
+                                },
+                            )
+                            .unwrap();
+
+                        for _ in 0..DEFAULT_MONSTERS_NUMBER {
+                            let monster_spawn_position = {
+                                find_creature_spawn_position(&tile_map, &mut creatures_positions)
+                                    .unwrap()
+                            };
+
+                            let strategy: MobStrategy = rand::random();
+
+                            let monster_entity = entities.create();
+                            monsters
+                                .insert(monster_entity, Monster { strategy })
+                                .unwrap();
+                            positions
+                                .insert(monster_entity, monster_spawn_position)
+                                .unwrap();
+                            stats
+                                .insert(
+                                    monster_entity,
+                                    CombatStats {
+                                        max_hp: 10,
+                                        hp: 10,
+                                        defense: 1,
+                                        power: 5,
+                                    },
+                                )
+                                .unwrap();
+                        }
                     }
                     GameState::Running => {
                         // FIXME: mock switch to "death".
@@ -154,7 +224,7 @@ impl<'a> specs::System<'a> for DummyFlowSystem {
 pub fn register(dispatcher: &mut DispatcherBuilder, world: &mut World) -> anyhow::Result<()> {
     world.insert(GameFlow::default());
 
-    dispatcher.add(DummyFlowSystem, "dummy_flow", &["monster_system"]);
+    dispatcher.add(DummyFlowSystem, "dummy_flow", &["death_system"]);
 
     Ok(())
 }

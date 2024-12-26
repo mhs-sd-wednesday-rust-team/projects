@@ -4,9 +4,8 @@ use specs::{Component, DenseVecStorage, DispatcherBuilder, World, WorldExt};
 
 use crate::board::tile::Tile;
 use crate::board::WorldTileMap;
-use crate::combat::CombatStats;
 use crate::components::Position;
-use crate::monster::Monster;
+use crate::flow::{GameFlow, GameState};
 use crate::term::TermEvents;
 
 pub mod view;
@@ -19,9 +18,7 @@ struct PlayerMoveSystem;
 impl PlayerMoveSystem {
     fn try_move_player<'a>(
         world_tile_map: &WorldTileMap,
-        entities: &Entities,
         players: &WriteStorage<'a, Player>,
-        monsters: &mut WriteStorage<'a, Monster>,
         positions: &mut WriteStorage<'a, Position>,
         delta_x: i64,
         delta_y: i64,
@@ -37,28 +34,12 @@ impl PlayerMoveSystem {
             }
         };
 
-        let monsters_collision = (entities, monsters, positions as &WriteStorage<'a, Position>)
-            .join()
-            .find(|(_, _, pos)| pos.x == new_pos.x && pos.y == new_pos.y)
-            .map(|(e, m, _)| (e, m));
-
         for (_, pos) in (players, positions).join() {
             let out_of_width = !(0 <= new_pos.x && new_pos.x < world_tile_map.width as i64);
             let out_of_height = !(0 <= new_pos.y && new_pos.y < world_tile_map.height as i64);
 
             if out_of_width || out_of_height {
                 continue;
-            }
-
-            if let Some((e, m)) = monsters_collision {
-                m.is_alive = false;
-                entities
-                    .delete(e)
-                    .expect("Monster entity killing should succeed");
-
-                pos.x = new_pos.x;
-                pos.y = new_pos.y;
-                return true;
             }
 
             if matches!(
@@ -79,25 +60,21 @@ impl PlayerMoveSystem {
 
 impl<'a> specs::System<'a> for PlayerMoveSystem {
     type SystemData = (
-        Entities<'a>,
         specs::WriteStorage<'a, Position>,
         specs::WriteStorage<'a, Player>,
-        specs::WriteStorage<'a, Monster>,
         specs::Read<'a, TermEvents>,
         specs::Read<'a, WorldTileMap>,
+        specs::Read<'a, GameFlow>,
     );
 
     fn run(
         &mut self,
-        (
-            entities,
-            mut positions,
-            players,
-            mut monsters,
-            term_events,
-            world_tile_map,
-        ): Self::SystemData,
+        (mut positions, players, term_events, world_tile_map, game_flow): Self::SystemData,
     ) {
+        let GameState::Running = game_flow.state else {
+            return;
+        };
+
         let world_map = &world_tile_map;
         for event in term_events.0.iter() {
             if let Event::Key(k) = event {
@@ -113,9 +90,7 @@ impl<'a> specs::System<'a> for PlayerMoveSystem {
                     if let Some((delta_x, delta_y)) = deltas {
                         Self::try_move_player(
                             world_map,
-                            &entities,
                             &players,
-                            &mut monsters,
                             &mut positions,
                             delta_x,
                             delta_y,
@@ -128,7 +103,6 @@ impl<'a> specs::System<'a> for PlayerMoveSystem {
 }
 
 pub fn register(dispatcher: &mut DispatcherBuilder, world: &mut World) -> anyhow::Result<()> {
-    world.register::<CombatStats>();
     world.register::<Player>();
 
     dispatcher.add(PlayerMoveSystem, "player_move_system", &[]);
@@ -182,7 +156,6 @@ mod tests {
             let mut world = World::new();
             world.register::<Player>();
             world.register::<Position>();
-            world.register::<Monster>();
 
             world
                 .create_entity()
@@ -191,13 +164,9 @@ mod tests {
                 .build();
 
             let players = &mut world.write_component::<Player>();
-            let monsters = &mut world.write_component::<Monster>();
             let positions = &mut world.write_component::<Position>();
-            let entities: Entities = world.entities();
 
-            PlayerMoveSystem::try_move_player(
-                &map, &entities, players, monsters, positions, dx, dy,
-            );
+            PlayerMoveSystem::try_move_player(&map, players, positions, dx, dy);
 
             for (_player, pos) in (players, positions).join() {
                 let actual_pos = (pos.x, pos.y);
