@@ -1,10 +1,11 @@
 use ratatui::{
-    layout::{Constraint, Direction, Layout},
+    layout::{Constraint, Direction, Flex, Layout},
     widgets::{Block, Paragraph, Widget},
 };
 
 use crate::{
     board::view::board::BoardView,
+    combat::{view::bar::CombatBarView, CombatStats},
     experience::{view::bar::ExperienceBarView, Experience},
     flow::Level,
 };
@@ -12,6 +13,7 @@ use crate::{
 pub struct PlayView<'a> {
     pub level: &'a Level,
     pub player_experience: &'a Experience,
+    pub player_stats: &'a CombatStats,
     pub board: BoardView<'a>,
 }
 
@@ -32,7 +34,12 @@ impl<'a> Widget for PlayView<'a> {
 
         let layout = Layout::default()
             .direction(Direction::Vertical)
-            .constraints(vec![Constraint::Fill(1), Constraint::Length(4)])
+            .constraints(vec![
+                Constraint::Fill(1),
+                Constraint::Length(2),
+                Constraint::Length(2),
+            ])
+            .flex(Flex::Center)
             .split(center_area);
 
         self.board.render(layout[0], buf);
@@ -42,8 +49,9 @@ impl<'a> Widget for PlayView<'a> {
             .horizontal_margin(16)
             .constraints(vec![
                 Constraint::Length(ExperienceBarView::MIN_LEN),
+                Constraint::Length(1),
+                Constraint::Length(CombatBarView::MIN_LEN),
                 Constraint::Fill(1),
-                Constraint::Length(100),
             ])
             .split(layout[1]);
 
@@ -52,7 +60,18 @@ impl<'a> Widget for PlayView<'a> {
         }
         .render(hud_layout[0], buf);
 
+        CombatBarView {
+            stats: self.player_stats,
+        }
+        .render(hud_layout[2], buf);
+
+        let hint_layout = Layout::default()
+            .direction(Direction::Horizontal)
+            .horizontal_margin(16)
+            .constraints(vec![Constraint::Fill(1)])
+            .split(layout[2]);
+
         Paragraph::new("move with `arrows` or (`h`,`j`,`k`,`l`); simulate death with `d`")
-            .render(hud_layout[2], buf);
+            .render(hint_layout[0], buf);
     }
 }

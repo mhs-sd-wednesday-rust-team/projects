@@ -23,12 +23,12 @@ pub struct BoardView<'a> {
 
 impl<'a> BoardView<'a> {
     pub fn new(
-        map: specs::Read<'a, WorldTileMap>,
-        pos: specs::ReadStorage<'a, Position>,
-        player: specs::ReadStorage<'a, Player>,
-        monsters: specs::ReadStorage<'a, Monster>,
-        stats: specs::ReadStorage<'a, CombatStats>,
-        potions: specs::ReadStorage<'a, Potion>,
+        map: &specs::Read<'a, WorldTileMap>,
+        pos: &specs::ReadStorage<'a, Position>,
+        player: &specs::ReadStorage<'a, Player>,
+        monsters: &specs::ReadStorage<'a, Monster>,
+        stats: &specs::ReadStorage<'a, CombatStats>,
+        potions: &specs::ReadStorage<'a, Potion>,
     ) -> Self {
         let mut rows = vec![];
         for board_row in map.board.iter() {
@@ -42,17 +42,17 @@ impl<'a> BoardView<'a> {
             rows.push(cells);
         }
 
-        for (_, pos) in (&potions, &pos).join() {
+        for (_, pos) in (potions, pos).join() {
             rows[pos.y as usize][pos.x as usize] = Cell::new(PotionView::default());
         }
-        for (_, pos, stat) in (&monsters, &pos, &stats).join() {
+        for (_, pos, stat) in (monsters, pos, stats).join() {
             rows[pos.y as usize][pos.x as usize] = Cell::new(MonsterView::default());
             if pos.y > 0 {
                 rows[pos.y as usize - 1][pos.x as usize] =
                     Cell::new(format!("{:2> }", stat.hp)).style(Style::default().fg(Color::Red));
             }
         }
-        for (_, pos) in (&player, &pos).join() {
+        for (_, pos) in (player, pos).join() {
             rows[pos.y as usize][pos.x as usize] = Cell::new(PlayerView::default());
         }
 

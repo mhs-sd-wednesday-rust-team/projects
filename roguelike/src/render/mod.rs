@@ -44,24 +44,26 @@ impl<'a> specs::System<'a> for RenderSystem {
                         frame.render_widget(GameView::Finish(FinishMenuView), area)
                     }
                     GameState::Running => {
-                        let (_, player_exp) = (&data.player, &data.experience)
-                            .join()
-                            .next()
-                            .expect("should be a player");
+                        let (_, player_experience, player_stats) =
+                            (&data.player, &data.experience, &data.stats)
+                                .join()
+                                .next()
+                                .expect("should be a player");
 
                         let board = BoardView::new(
-                            data.map,
-                            data.pos,
-                            data.player,
-                            data.monsters,
-                            data.stats,
-                            data.potions,
+                            &data.map,
+                            &data.pos,
+                            &data.player,
+                            &data.monsters,
+                            &data.stats,
+                            &data.potions,
                         );
 
                         frame.render_widget(
                             GameView::Play(PlayView {
                                 board,
-                                player_experience: player_exp,
+                                player_experience,
+                                player_stats,
                                 level: &data.game_flow.level,
                             }),
                             area,

@@ -13,6 +13,8 @@ use crate::{
     turn::Turn,
 };
 
+pub mod view;
+
 #[derive(Component)]
 #[allow(dead_code)]
 pub struct CombatStats {
