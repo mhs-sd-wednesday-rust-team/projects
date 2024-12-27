@@ -8,9 +8,9 @@ use specs::Join;
 use crate::{
     board::WorldTileMap,
     combat::CombatStats,
-    components::Position,
     items::{view::potion::PotionView, Potion},
     monster::{view::monster::MonsterView, Monster},
+    movement::Position,
     player::{view::player::PlayerView, Player},
 };
 

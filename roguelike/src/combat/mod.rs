@@ -9,10 +9,10 @@ use specs::{
 };
 
 use crate::{
-    components::Position,
     experience::{GainExperience, KillExperience},
     flow::{GameFlow, GameState},
     monster::Monster,
+    movement::Position,
     player::Player,
     turn::Turn,
 };

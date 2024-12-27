@@ -1,10 +1,10 @@
 use anyhow::anyhow;
 use rand::seq::IteratorRandom;
-use specs::{Builder, Component, DenseVecStorage, DispatcherBuilder, World, WorldExt};
+use specs::{Component, DenseVecStorage, DispatcherBuilder, World, WorldExt};
 
 use crate::board::tile::Tile;
 use crate::board::WorldTileMap;
-use crate::components::Position;
+use crate::movement::Position;
 use crate::player::Player;
 
 pub mod view;
@@ -74,22 +74,6 @@ pub fn find_item_spawn_position(
 
 pub fn register(dispatcher: &mut DispatcherBuilder, world: &mut World) -> anyhow::Result<()> {
     world.register::<Potion>();
-
-    let mut item_spawn_positions =
-        Vec::with_capacity(DEFAULT_POTIONS_NUMBER + DEFAULT_WEAPON_NUMBER);
-
-    for _ in 0..DEFAULT_POTIONS_NUMBER {
-        let potion_pos = {
-            let tile_map = world.read_resource::<WorldTileMap>();
-            find_item_spawn_position(&tile_map, &mut item_spawn_positions)?
-        };
-
-        world
-            .create_entity()
-            .with(potion_pos)
-            .with(Potion { heal_amount: 5 })
-            .build();
-    }
 
     dispatcher.add(ItemCollectionSystem, "item_collection_system", &[]);
     Ok(())

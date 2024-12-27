@@ -6,8 +6,8 @@ use specs::{prelude::*, Component};
 use crate::{
     board::{tile::Tile, WorldTileMap},
     combat::CombatStats,
-    components::Position,
     flow::{GameFlow, GameState},
+    movement::Position,
     turn::Turn,
 };
 

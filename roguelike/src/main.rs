@@ -10,6 +10,7 @@ mod experience;
 mod flow;
 mod items;
 mod monster;
+mod movement;
 mod player;
 mod render;
 mod term;
@@ -22,6 +23,7 @@ fn main() -> Result<()> {
     term::register(&mut dispatcher_builder, &mut world).unwrap();
     board::register(&mut dispatcher_builder, &mut world).unwrap();
     items::register(&mut dispatcher_builder, &mut world).unwrap();
+    movement::register(&mut dispatcher_builder, &mut world).unwrap();
     player::register(&mut dispatcher_builder, &mut world).unwrap();
     monster::register(&mut dispatcher_builder, &mut world).unwrap();
     combat::register(&mut dispatcher_builder, &mut world).unwrap();

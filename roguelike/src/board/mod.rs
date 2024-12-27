@@ -1,8 +1,7 @@
-use crate::components::Position;
 use generator::generate_map;
 use mapgen::MapBuffer;
 
-use specs::{DispatcherBuilder, World, WorldExt};
+use specs::{DispatcherBuilder, World};
 use tile::Tile;
 
 use self::tile::Biome;
@@ -58,8 +57,6 @@ const BOARD_HEIGHT: usize = 50;
 const BOARD_WIDTH: usize = 80;
 
 pub fn register(_: &mut DispatcherBuilder, world: &mut World) -> anyhow::Result<()> {
-    world.register::<Position>();
-
     let map = generate_map();
 
     let mut world_tile_map = WorldTileMap::new_empty(BOARD_WIDTH, BOARD_HEIGHT);

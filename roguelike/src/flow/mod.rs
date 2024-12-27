@@ -4,13 +4,15 @@ use specs::{DispatcherBuilder, World};
 
 use crate::combat::CombatStats;
 use crate::experience::{Experience, KillExperience};
-use crate::items::{find_item_spawn_position, DEFAULT_POTIONS_NUMBER, DEFAULT_WEAPON_NUMBER};
+use crate::items::{
+    find_item_spawn_position, Potion, DEFAULT_POTIONS_NUMBER, DEFAULT_WEAPON_NUMBER,
+};
 use crate::monster::split_ability::SplitMonsterAbility;
 use crate::monster::{find_creature_spawn_position, MobStrategy, Monster, DEFAULT_MONSTERS_NUMBER};
 use crate::turn::Turn;
 use crate::{
     board::{generator::generate_map, WorldTileMap},
-    components::Position,
+    movement::Position,
     player::Player,
     term::TermEvents,
 };
@@ -66,6 +68,7 @@ impl<'a> specs::System<'a> for DummyFlowSystem {
         specs::WriteStorage<'a, Position>,
         specs::WriteStorage<'a, Player>,
         specs::WriteStorage<'a, Monster>,
+        specs::WriteStorage<'a, Potion>,
         specs::WriteStorage<'a, CombatStats>,
         specs::WriteStorage<'a, Experience>,
         specs::WriteStorage<'a, KillExperience>,
@@ -83,6 +86,7 @@ impl<'a> specs::System<'a> for DummyFlowSystem {
             mut positions,
             mut players,
             mut monsters,
+            mut potions,
             mut stats,
             mut experiences,
             mut kill_experiences,
@@ -112,6 +116,22 @@ impl<'a> specs::System<'a> for DummyFlowSystem {
                             find_creature_spawn_position(&tile_map, &mut creatures_positions)
                                 .unwrap()
                         };
+
+                        let mut item_spawn_positions =
+                            Vec::with_capacity(DEFAULT_POTIONS_NUMBER + DEFAULT_WEAPON_NUMBER);
+
+                        for _ in 0..DEFAULT_POTIONS_NUMBER {
+                            let potion_pos = {
+                                find_item_spawn_position(&tile_map, &mut item_spawn_positions)
+                                    .unwrap()
+                            };
+
+                            let potion_entity = entities.create();
+                            positions.insert(potion_entity, potion_pos).unwrap();
+                            potions
+                                .insert(potion_entity, Potion { heal_amount: 5 })
+                                .unwrap();
+                        }
 
                         let player_entity = entities.create();
                         players.insert(player_entity, Player {}).unwrap();

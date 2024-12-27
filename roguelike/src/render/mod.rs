@@ -9,7 +9,6 @@ use specs::{prelude::ResourceId, DispatcherBuilder, Join, SystemData, World};
 use crate::{
     board::{view::board::BoardView, WorldTileMap},
     combat::{view::popup::CombatFlowView, CombatState, CombatStats},
-    components::Position,
     experience::Experience,
     flow::{
         view::{FinishMenuView, GameView, PlayView, StartMenuView},
@@ -17,6 +16,7 @@ use crate::{
     },
     items::Potion,
     monster::Monster,
+    movement::Position,
     player::Player,
     term::Term,
 };
