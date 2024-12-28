@@ -42,7 +42,7 @@ impl<'a> Widget for CombatFlowView<'a> {
         };
 
         let vertical = Layout::vertical([Constraint::Length(5)]).flex(Flex::Center);
-        let horizontal = Layout::horizontal([Constraint::Length(30)]).flex(Flex::Center);
+        let horizontal = Layout::horizontal([Constraint::Length(24)]).flex(Flex::Center);
         let [area] = vertical.areas(area);
         let [area] = horizontal.areas(area);
 
@@ -94,7 +94,7 @@ impl<'a> Widget for CombatFlowView<'a> {
             CombatFlowState::HpDiff { defending_diff } => (0, defending_diff),
         };
 
-        Paragraph::new(format!("{:4> }", l_num)).render(combat_layout[2], buf);
-        Paragraph::new(format!("{:4> }", r_num)).render(combat_layout[5], buf);
+        Paragraph::new(format!("{: <4}", l_num)).render(combat_layout[2], buf);
+        Paragraph::new(format!("{: >4}", r_num)).render(combat_layout[4], buf);
     }
 }

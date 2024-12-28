@@ -5,8 +5,10 @@ use ratatui::{
 use specs::{World, WorldExt};
 
 use crate::{
-    board::view::board::BoardView, combat::view::bar::CombatBarView,
-    experience::view::bar::ExperienceBarView, flow::GameFlow,
+    board::view::board::BoardView,
+    combat::view::{bar::CombatBarView, popup::CombatFlowView},
+    experience::view::bar::ExperienceBarView,
+    flow::GameFlow,
 };
 
 pub struct PlayView<'a> {
@@ -64,5 +66,7 @@ impl<'a> Widget for PlayView<'a> {
 
         Paragraph::new("move with `arrows` or (`h`,`j`,`k`,`l`); simulate death with `d`")
             .render(hint_layout[0], buf);
+
+        CombatFlowView { world: self.world }.render(area, buf);
     }
 }
