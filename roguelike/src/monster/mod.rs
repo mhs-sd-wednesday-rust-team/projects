@@ -1,14 +1,16 @@
 use rand::distributions::{Distribution, Standard};
 use rand::seq::SliceRandom;
-use rand::Rng;
+use rand::{thread_rng, Rng};
 use specs::prelude::*;
 use specs::Component;
+use split_ability::SplitMonsterAbility;
 
-use crate::board::tile::Tile;
 use crate::board::WorldTileMap;
+use crate::combat::{CombatState, CombatStats};
+use crate::experience::KillExperience;
 use crate::flow::{GameFlow, GameState};
-use crate::movement::MoveAction;
 use crate::movement::Position;
+use crate::movement::{find_free_position, MoveAction};
 use crate::player::Player;
 use crate::turn::Turn;
 
@@ -73,6 +75,86 @@ pub struct Monster {
     pub strategy: MobStrategy,
 }
 
+struct MonsterSpawnSystem;
+
+impl<'a> specs::System<'a> for MonsterSpawnSystem {
+    type SystemData = (
+        specs::Entities<'a>,
+        specs::WriteStorage<'a, Position>,
+        specs::WriteStorage<'a, Monster>,
+        specs::WriteStorage<'a, CombatStats>,
+        specs::WriteStorage<'a, KillExperience>,
+        specs::WriteStorage<'a, SplitMonsterAbility>,
+        specs::Read<'a, GameFlow>,
+        specs::Read<'a, CombatState>,
+        specs::Read<'a, WorldTileMap>,
+    );
+
+    fn run(
+        &mut self,
+        (
+            entities,
+            mut positions,
+            mut monsters,
+            mut stats,
+            mut kill_experiences,
+            mut split_abilities,
+            game_flow,
+            combat_state,
+            tile_map,
+        ): Self::SystemData,
+    ) {
+        let GameState::Started = game_flow.state else {
+            return;
+        };
+        let CombatState::NoCombat = *combat_state else {
+            return;
+        };
+
+        for (e, _) in (&entities, &monsters).join() {
+            entities.delete(e).unwrap();
+        }
+
+        let mut rng = thread_rng();
+
+        for _ in 0..DEFAULT_MONSTERS_NUMBER {
+            let monster_spawn_position =
+                { find_free_position(&tile_map, positions.join()).unwrap() };
+
+            let strategy: MobStrategy = rand::random();
+
+            let monster_entity = entities.create();
+            monsters
+                .insert(monster_entity, Monster { strategy })
+                .unwrap();
+            positions
+                .insert(monster_entity, monster_spawn_position)
+                .unwrap();
+            stats
+                .insert(
+                    monster_entity,
+                    CombatStats {
+                        max_hp: 10,
+                        hp: 10,
+                        defense: 1,
+                        power: 5,
+                    },
+                )
+                .unwrap();
+            kill_experiences
+                .insert(monster_entity, KillExperience::new(50))
+                .unwrap();
+
+            let can_split: u8 = rng.gen_range(0..10);
+            if can_split == 0 {
+                split_abilities
+                    .insert(monster_entity, SplitMonsterAbility::new(2))
+                    .unwrap();
+            }
+        }
+    }
+}
+
 struct MonsterMoveSystem;
 
 impl<'a> specs::System<'a> for MonsterMoveSystem {
@@ -84,13 +166,17 @@ impl<'a> specs::System<'a> for MonsterMoveSystem {
         specs::WriteStorage<'a, MoveAction>,
         specs::Read<'a, Turn>,
         specs::Read<'a, GameFlow>,
+        specs::Read<'a, CombatState>,
     );
 
     fn run(
         &mut self,
-        (entities, positions, players, monsters, mut moves, turn, game_flow): Self::SystemData,
+        (entities, positions, players, monsters, mut moves, turn, game_flow, combat_state): Self::SystemData,
     ) {
         let GameState::Running = game_flow.state else {
+            return;
+        };
+        let CombatState::NoCombat = *combat_state else {
             return;
         };
         if *turn != Turn::Game {
@@ -109,32 +195,19 @@ impl<'a> specs::System<'a> for MonsterMoveSystem {
     }
 }
 
-pub fn find_creature_spawn_position(
-    map: &WorldTileMap,
-    creatures_positions: &mut Vec<Position>,
-) -> anyhow::Result<Position> {
-    let mut rng = rand::thread_rng();
-
-    loop {
-        let x = rng.gen_range(0..map.width);
-        let y = rng.gen_range(0..map.height);
-
-        let proposed_position = Position::new(x as i64, y as i64);
-
-        if matches!(map.board[y][x], Tile::Wall) || creatures_positions.contains(&proposed_position)
-        {
-            continue;
-        }
-
-        creatures_positions.push(proposed_position);
-        return Ok(proposed_position);
-    }
-}
-
 pub fn register(dispatcher: &mut DispatcherBuilder, world: &mut World) -> anyhow::Result<()> {
     world.register::<Monster>();
 
-    dispatcher.add(MonsterMoveSystem, "monster_move_system", &[]);
+    dispatcher.add(
+        MonsterSpawnSystem,
+        "monster_spawn_system",
+        &["map_generation_system"],
+    );
+    dispatcher.add(
+        MonsterMoveSystem,
+        "monster_move_system",
+        &["monster_spawn_system"],
+    );
 
     split_ability::register(dispatcher, world)?;
 

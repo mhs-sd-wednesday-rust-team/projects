@@ -1,3 +1,5 @@
+use anyhow::anyhow;
+use rand::Rng;
 use specs::{Component, DenseVecStorage, DispatcherBuilder, Entities, Join, World, WorldExt};
 
 use crate::board::{tile::Tile, WorldTileMap};
@@ -28,6 +30,28 @@ impl Position {
             MoveAction::new(0, dy.signum())
         }
     }
+}
+
+pub fn find_free_position<'a>(
+    map: &'a WorldTileMap,
+    mut positions: impl Iterator<Item = &'a Position>,
+) -> anyhow::Result<Position> {
+    let mut rng = rand::thread_rng();
+
+    for _ in 0..10000 {
+        let x = rng.gen_range(0..map.width);
+        let y = rng.gen_range(0..map.height);
+
+        let proposed_position = Position::new(x as i64, y as i64);
+
+        if matches!(map.board[y][x], Tile::Wall) || positions.any(|p| *p == proposed_position) {
+            continue;
+        }
+
+        return Ok(proposed_position);
+    }
+
+    Err(anyhow!("failed to find a spawn position"))
 }
 
 #[derive(Component)]

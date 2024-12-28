@@ -5,7 +5,7 @@ use specs::{prelude::*, Component};
 
 use crate::{
     board::{tile::Tile, WorldTileMap},
-    combat::CombatStats,
+    combat::{CombatState, CombatStats},
     flow::{GameFlow, GameState},
     movement::Position,
     turn::Turn,
@@ -67,6 +67,7 @@ impl<'a> specs::System<'a> for SplitMonsterAbilitySystem {
         specs::ReadStorage<'a, SplitMonsterAbility>,
         specs::Read<'a, LazyUpdate>,
         specs::Read<'a, GameFlow>,
+        specs::Read<'a, CombatState>,
         specs::Read<'a, Turn>,
     );
 
@@ -81,10 +82,14 @@ impl<'a> specs::System<'a> for SplitMonsterAbilitySystem {
             split_abilities,
             updater,
             game_flow,
+            combat_state,
             turn,
         ): Self::SystemData,
     ) {
         let GameState::Running = game_flow.state else {
+            return;
+        };
+        let CombatState::NoCombat = *combat_state else {
             return;
         };
 

@@ -20,6 +20,9 @@ use crate::{
 pub mod view;
 
 #[derive(Component, Clone)]
+pub struct Attacked;
+
+#[derive(Component, Clone)]
 pub struct CombatStats {
     pub max_hp: i64,
     pub hp: i64,
@@ -71,20 +74,35 @@ impl<'a> specs::System<'a> for CombatSystem {
         specs::WriteStorage<'a, Player>,
         specs::WriteStorage<'a, Monster>,
         specs::WriteStorage<'a, CombatStats>,
+        specs::WriteStorage<'a, Attacked>,
         specs::ReadStorage<'a, Position>,
-        specs::Write<'a, GameFlow>,
+        specs::Read<'a, GameFlow>,
     );
 
     fn run(
         &mut self,
-        (entities, mut combat_state, turn, player, monsters, mut stats, positions, mut game_state): Self::SystemData,
+        (
+            entities,
+            mut combat_state,
+            turn,
+            player,
+            monsters,
+            mut stats,
+            mut attacked,
+            positions,
+            game_state,
+        ): Self::SystemData,
     ) {
-        let (GameState::Running | GameState::Combat) = game_state.state else {
+        let GameState::Running = game_state.state else {
             return;
         };
 
         match combat_state.deref_mut() {
             CombatState::NoCombat => {
+                for (e, _) in (&entities, &player).join() {
+                    attacked.remove(e);
+                }
+
                 let (_, player_pos, player_entity) = (&player, &positions, &entities)
                     .join()
                     .next()
@@ -111,7 +129,6 @@ impl<'a> specs::System<'a> for CombatSystem {
                         started: Instant::now(),
                         state: CombatFlowState::Tossing,
                     });
-                    game_state.state = GameState::Combat;
                 }
             }
             CombatState::Combat(CombatFlow {
@@ -153,11 +170,11 @@ impl<'a> specs::System<'a> for CombatSystem {
                 }
                 CombatFlowState::HpDiff { defending_diff } => {
                     let defending_stats = stats.get_mut(*defending).unwrap();
+                    attacked.insert(*attacker, Attacked).unwrap();
 
                     defending_stats.hp += *defending_diff;
 
                     *combat_state = CombatState::NoCombat;
-                    game_state.state = GameState::Running;
                 }
             },
             _ => {}
@@ -175,23 +192,16 @@ impl<'a> specs::System<'a> for DeathSystem {
         specs::ReadStorage<'a, CombatStats>,
         specs::ReadStorage<'a, KillExperience>,
         specs::WriteStorage<'a, GainExperience>,
-        specs::Write<'a, GameFlow>,
+        specs::Read<'a, GameFlow>,
     );
 
     fn run(
         &mut self,
-        (entities, player, monsters, stats, kill_experience, mut gain_experience, mut game_flow): Self::SystemData,
+        (entities, player, monsters, stats, kill_experience, mut gain_experience, game_flow): Self::SystemData,
     ) {
-        let (GameState::Running | GameState::Combat) = game_flow.state else {
+        let GameState::Running = game_flow.state else {
             return;
         };
-
-        for (player_stats, _) in (&stats, &player).join() {
-            if player_stats.hp <= 0 {
-                game_flow.state = GameState::Finished;
-                return;
-            }
-        }
 
         let (player_entity, _) = (&entities, &player).join().next().unwrap();
 
@@ -217,6 +227,7 @@ pub fn register(dispatcher: &mut DispatcherBuilder, world: &mut World) -> anyhow
     world.insert(CombatState::default());
 
     world.register::<CombatStats>();
+    world.register::<Attacked>();
 
     dispatcher.add(
         CombatSystem,

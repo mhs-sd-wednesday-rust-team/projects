@@ -59,7 +59,8 @@ impl<'a> Widget for RenderView<'a> {
         match self.game_flow.state {
             GameState::Start => GameView::Start(StartMenuView).render(area, buf),
             GameState::Finished => GameView::Finish(FinishMenuView).render(area, buf),
-            GameState::Running | GameState::Combat => {
+            GameState::Started => {}
+            GameState::Running => {
                 let (_, player_experience, player_stats, player_entity) =
                     (self.player, self.experience, self.stats, self.entities)
                         .join()
