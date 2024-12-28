@@ -7,7 +7,10 @@ use ratatui::{
 use specs::{prelude::ResourceId, DispatcherBuilder, Join, SystemData, World};
 
 use crate::{
-    board::{view::board::BoardView, WorldTileMap},
+    board::{
+        view::board::{BoardView, BoardViewContext},
+        WorldTileMap,
+    },
     combat::{view::popup::CombatFlowView, CombatState, CombatStats},
     experience::Experience,
     flow::{
@@ -15,7 +18,7 @@ use crate::{
         GameFlow, GameState,
     },
     items::Potion,
-    monster::Monster,
+    monster::{split_ability::SplitMonsterAbility, view::monster::MonsterView, Monster},
     movement::Position,
     player::Player,
     term::Term,
@@ -33,6 +36,7 @@ struct RenderSystemData<'a> {
     pos: specs::ReadStorage<'a, Position>,
     player: specs::ReadStorage<'a, Player>,
     monsters: specs::ReadStorage<'a, Monster>,
+    splitting_monsters: specs::ReadStorage<'a, SplitMonsterAbility>,
     stats: specs::ReadStorage<'a, CombatStats>,
     potions: specs::ReadStorage<'a, Potion>,
     experience: specs::ReadStorage<'a, Experience>,
@@ -46,6 +50,7 @@ struct RenderView<'a> {
     pub pos: &'a specs::ReadStorage<'a, Position>,
     pub player: &'a specs::ReadStorage<'a, Player>,
     pub monsters: &'a specs::ReadStorage<'a, Monster>,
+    pub splitting_monsters: &'a specs::ReadStorage<'a, SplitMonsterAbility>,
     pub stats: &'a specs::ReadStorage<'a, CombatStats>,
     pub potions: &'a specs::ReadStorage<'a, Potion>,
     pub experience: &'a specs::ReadStorage<'a, Experience>,
@@ -67,14 +72,16 @@ impl<'a> Widget for RenderView<'a> {
                         .next()
                         .expect("should be a player");
 
-                let board = BoardView::new(
-                    self.map,
-                    self.pos,
-                    self.player,
-                    self.monsters,
-                    self.stats,
-                    self.potions,
-                );
+                let board = BoardView::new(BoardViewContext {
+                    entities: self.entities,
+                    map: self.map,
+                    pos: self.pos,
+                    player: self.player,
+                    monsters: self.monsters,
+                    stats: self.stats,
+                    splitting_monsters: self.splitting_monsters,
+                    potions: self.potions,
+                });
 
                 GameView::Play(PlayView {
                     board,
@@ -91,9 +98,21 @@ impl<'a> Widget for RenderView<'a> {
                     let [area] = vertical.areas(area);
                     let [area] = horizontal.areas(area);
 
+                    let is_attacking = player_entity == state.attacker;
+                    let monster_entity = if is_attacking {
+                        state.defending
+                    } else {
+                        state.attacker
+                    };
+                    let monster = self.monsters.get(monster_entity).unwrap();
+
                     CombatFlowView {
                         state: &state.state,
                         is_attacking: player_entity == state.attacker,
+                        mob: MonsterView {
+                            monster,
+                            is_splitting: self.splitting_monsters.contains(monster_entity),
+                        },
                     }
                     .render(area, buf);
                 }
@@ -121,6 +140,7 @@ impl<'a> specs::System<'a> for RenderSystem {
                         player: &data.player,
                         potions: &data.potions,
                         monsters: &data.monsters,
+                        splitting_monsters: &data.splitting_monsters,
                         game_flow: &data.game_flow,
                         experience: &data.experience,
                     },

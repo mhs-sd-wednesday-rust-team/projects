@@ -208,12 +208,12 @@ impl<'a> specs::System<'a> for DeathSystem {
         gain_experience
             .insert(player_entity, GainExperience::new(0))
             .unwrap();
-        for (entity, entity_stats, kill_exp, _) in
-            (&entities, &stats, &kill_experience, &monsters).join()
-        {
+        for (entity, entity_stats, _) in (&entities, &stats, &monsters).join() {
             if entity_stats.hp <= 0 {
-                let gain = gain_experience.get_mut(player_entity).unwrap();
-                gain.exp_count += GainExperience::from(kill_exp.clone()).exp_count;
+                if let Some(kill_exp) = kill_experience.get(entity) {
+                    let gain = gain_experience.get_mut(player_entity).unwrap();
+                    gain.exp_count += GainExperience::from(kill_exp.clone()).exp_count;
+                }
 
                 entities
                     .delete(entity)

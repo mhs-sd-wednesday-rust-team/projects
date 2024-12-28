@@ -5,10 +5,13 @@ use ratatui::{
     widgets::{Block, Clear, Paragraph, Widget},
 };
 
-use crate::combat::CombatFlowState;
+use crate::{
+    combat::CombatFlowState, monster::view::monster::MonsterView, player::view::player::PlayerView,
+};
 
 pub struct CombatFlowView<'a> {
     pub state: &'a CombatFlowState,
+    pub mob: MonsterView<'a>,
     pub is_attacking: bool,
 }
 
@@ -30,9 +33,9 @@ impl<'a> Widget for CombatFlowView<'a> {
             .constraints(vec![
                 Constraint::Length(2),
                 Constraint::Length(2),
-                Constraint::Length(3),
+                Constraint::Length(4),
                 Constraint::Fill(1),
-                Constraint::Length(3),
+                Constraint::Length(4),
                 Constraint::Length(2),
                 Constraint::Length(2),
             ])
@@ -42,8 +45,9 @@ impl<'a> Widget for CombatFlowView<'a> {
         Paragraph::new("⚔️").render(combat_layout[1], buf);
         Paragraph::new("🛡️").render(combat_layout[5], buf);
 
-        Paragraph::new("🦀").render(combat_layout[if self.is_attacking { 0 } else { 6 }], buf);
-        Paragraph::new("👾").render(combat_layout[if self.is_attacking { 6 } else { 0 }], buf);
+        Paragraph::new(PlayerView::default())
+            .render(combat_layout[if self.is_attacking { 0 } else { 6 }], buf);
+        Paragraph::new(self.mob).render(combat_layout[if self.is_attacking { 6 } else { 0 }], buf);
 
         let mut rng = thread_rng();
 
@@ -60,7 +64,7 @@ impl<'a> Widget for CombatFlowView<'a> {
             CombatFlowState::HpDiff { defending_diff } => (0, *defending_diff),
         };
 
-        Paragraph::new(format!("{:3> }", l_num)).render(combat_layout[2], buf);
-        Paragraph::new(format!("{:3> }", r_num)).render(combat_layout[5], buf);
+        Paragraph::new(format!("{:4> }", l_num)).render(combat_layout[2], buf);
+        Paragraph::new(format!("{:4> }", r_num)).render(combat_layout[5], buf);
     }
 }

@@ -1,19 +1,29 @@
-use std::marker::PhantomData;
-
 use ratatui::{
     style::{Color, Style},
     text::{Span, Text},
 };
 
-#[derive(Default)]
+use crate::monster::{MobStrategy, Monster};
+
+#[derive(Clone)]
 pub struct MonsterView<'a> {
-    pub tag: PhantomData<&'a ()>,
-    // some stats that affect view
+    pub monster: &'a Monster,
+    pub is_splitting: bool,
 }
 
 impl<'a> From<MonsterView<'a>> for Text<'a> {
-    fn from(_: MonsterView<'a>) -> Self {
-        Span::raw("👾")
+    fn from(value: MonsterView<'a>) -> Self {
+        let glyph = if value.is_splitting {
+            "💩"
+        } else {
+            match value.monster.strategy {
+                MobStrategy::Random => "🌪️",
+                MobStrategy::Coward => "🐞",
+                MobStrategy::Aggressive => "👾",
+            }
+        };
+
+        Span::raw(glyph)
             .style(Style::default().fg(Color::LightRed).bg(Color::Black))
             .into()
     }

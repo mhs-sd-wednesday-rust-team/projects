@@ -6,6 +6,7 @@ use specs::{prelude::*, Component};
 use crate::{
     board::{tile::Tile, WorldTileMap},
     combat::{CombatState, CombatStats},
+    experience::KillExperience,
     flow::{GameFlow, GameState},
     movement::Position,
     turn::Turn,
@@ -65,6 +66,7 @@ impl<'a> specs::System<'a> for SplitMonsterAbilitySystem {
         specs::ReadStorage<'a, Monster>,
         specs::ReadStorage<'a, CombatStats>,
         specs::ReadStorage<'a, SplitMonsterAbility>,
+        specs::ReadStorage<'a, KillExperience>,
         specs::Read<'a, LazyUpdate>,
         specs::Read<'a, GameFlow>,
         specs::Read<'a, CombatState>,
@@ -80,6 +82,7 @@ impl<'a> specs::System<'a> for SplitMonsterAbilitySystem {
             monsters,
             stats,
             split_abilities,
+            kill_experiences,
             updater,
             game_flow,
             combat_state,
@@ -99,9 +102,15 @@ impl<'a> specs::System<'a> for SplitMonsterAbilitySystem {
 
         let mut rng = rand::thread_rng();
 
-        let need_split: Vec<_> = (&monsters, &split_abilities, &positions, &stats)
+        let need_split: Vec<_> = (
+            &monsters,
+            &split_abilities,
+            &positions,
+            &stats,
+            &kill_experiences,
+        )
             .join()
-            .filter(|(_, split_ability, _pos, _stats)| {
+            .filter(|(_, split_ability, _pos, _stats, _kill_exp)| {
                 rng.gen_range(0..100) < split_ability.split_probability_pct
             })
             .collect();
@@ -113,7 +122,11 @@ impl<'a> specs::System<'a> for SplitMonsterAbilitySystem {
         let positions_cloned = positions.as_slice().iter().cloned();
         let mut occupied_positions = HashSet::<Position>::from_iter(positions_cloned);
 
-        for (monster, split_ability, old_pos, stat) in need_split.into_iter() {
+        for (monster, split_ability, old_pos, stat, kill_exp) in need_split.into_iter() {
+            if stat.max_hp <= 2 {
+                continue;
+            }
+
             let Some(new_pos) =
                 self.get_spawn_position(&mut rng, &occupied_positions, &world_tile_map, old_pos)
             else {
@@ -124,7 +137,15 @@ impl<'a> specs::System<'a> for SplitMonsterAbilitySystem {
             updater.insert(new_monster_entity, *monster);
             updater.insert(new_monster_entity, *split_ability);
             updater.insert(new_monster_entity, new_pos);
-            updater.insert(new_monster_entity, (*stat).clone());
+
+            let mut new_stat = (*stat).clone();
+            new_stat.hp -= 2;
+            new_stat.max_hp -= 2;
+            updater.insert(new_monster_entity, new_stat);
+
+            let mut new_kill_exp = (*kill_exp).clone();
+            new_kill_exp.exp_count = new_kill_exp.exp_count.saturating_sub(2);
+            updater.insert(new_monster_entity, new_kill_exp);
 
             occupied_positions.insert(new_pos);
         }
@@ -135,8 +156,8 @@ pub fn register(dispatcher: &mut DispatcherBuilder, world: &mut World) -> anyhow
     world.register::<SplitMonsterAbility>();
     dispatcher.add(
         SplitMonsterAbilitySystem,
-        "split_monster_ability",
-        &["player_move_system", "monster_move_system"],
+        "monster_split_system",
+        &["monster_spawn_system"],
     );
     Ok(())
 }

@@ -14,6 +14,7 @@ use crate::movement::{find_free_position, MoveAction};
 use crate::player::Player;
 use crate::turn::Turn;
 
+pub mod panic;
 pub mod split_ability;
 pub mod view;
 
@@ -203,13 +204,19 @@ pub fn register(dispatcher: &mut DispatcherBuilder, world: &mut World) -> anyhow
         "monster_spawn_system",
         &["map_generation_system"],
     );
+
+    split_ability::register(dispatcher, world)?;
+    panic::register(dispatcher, world)?;
+
     dispatcher.add(
         MonsterMoveSystem,
         "monster_move_system",
-        &["monster_spawn_system"],
+        &[
+            "monster_split_system",
+            "monster_panic_system",
+            "monster_spawn_system",
+        ],
     );
-
-    split_ability::register(dispatcher, world)?;
 
     Ok(())
 }
