@@ -3,14 +3,14 @@ use ratatui::{
     style::{Color, Style},
     widgets::{Cell, Row, Table, Widget},
 };
-use specs::Join;
+use specs::{Join, World, WorldExt};
 
 use crate::{
     board::WorldTileMap,
     combat::CombatStats,
-    components::Position,
     items::{view::potion::PotionView, Potion},
     monster::{view::monster::MonsterView, Monster},
+    movement::Position,
     player::{view::player::PlayerView, Player},
 };
 
@@ -22,14 +22,15 @@ pub struct BoardView<'a> {
 }
 
 impl<'a> BoardView<'a> {
-    pub fn new(
-        map: &specs::Read<'a, WorldTileMap>,
-        pos: &specs::ReadStorage<'a, Position>,
-        player: &specs::ReadStorage<'a, Player>,
-        monsters: &specs::ReadStorage<'a, Monster>,
-        stats: &specs::ReadStorage<'a, CombatStats>,
-        potions: &specs::ReadStorage<'a, Potion>,
-    ) -> Self {
+    pub fn new(world: &'a World) -> Self {
+        let entities = world.entities();
+        let map = world.read_resource::<WorldTileMap>();
+        let pos = world.read_storage::<Position>();
+        let player = world.read_storage::<Player>();
+        let monsters = world.read_storage::<Monster>();
+        let stats = world.read_storage::<CombatStats>();
+        let potions = world.read_storage::<Potion>();
+
         let mut rows = vec![];
         for board_row in map.board.iter() {
             let mut cells = vec![];
@@ -42,17 +43,17 @@ impl<'a> BoardView<'a> {
             rows.push(cells);
         }
 
-        for (_, pos) in (potions, pos).join() {
+        for (_, pos) in (&potions, &pos).join() {
             rows[pos.y as usize][pos.x as usize] = Cell::new(PotionView::default());
         }
-        for (_, pos, stat) in (monsters, pos, stats).join() {
-            rows[pos.y as usize][pos.x as usize] = Cell::new(MonsterView::default());
+        for (e, _, pos, stat) in (&entities, &monsters, &pos, &stats).join() {
+            rows[pos.y as usize][pos.x as usize] = Cell::new(MonsterView { world, entity: e });
             if pos.y > 0 {
                 rows[pos.y as usize - 1][pos.x as usize] =
                     Cell::new(format!("{:2> }", stat.hp)).style(Style::default().fg(Color::Red));
             }
         }
-        for (_, pos) in (player, pos).join() {
+        for (_, pos) in (&player, &pos).join() {
             rows[pos.y as usize][pos.x as usize] = Cell::new(PlayerView::default());
         }
 

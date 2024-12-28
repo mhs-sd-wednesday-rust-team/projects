@@ -2,11 +2,12 @@ use ratatui::{
     layout::{Constraint, Direction, Layout},
     widgets::{LineGauge, Paragraph, Widget},
 };
+use specs::{Join, World, WorldExt};
 
-use crate::experience::Experience;
+use crate::{experience::Experience, player::Player};
 
 pub struct ExperienceBarView<'a> {
-    pub experience: &'a Experience,
+    pub world: &'a World,
 }
 
 impl<'a> ExperienceBarView<'a> {
@@ -18,6 +19,14 @@ impl<'a> Widget for ExperienceBarView<'a> {
     where
         Self: Sized,
     {
+        let players = self.world.read_storage::<Player>();
+        let experiences = self.world.read_storage::<Experience>();
+
+        let (_, player_experience) = (&players, &experiences)
+            .join()
+            .next()
+            .expect("should be a player");
+
         let exp_layout = Layout::default()
             .direction(Direction::Horizontal)
             .constraints(vec![
@@ -32,11 +41,11 @@ impl<'a> Widget for ExperienceBarView<'a> {
         Paragraph::new("exp: [").render(exp_layout[0], buf);
 
         LineGauge::default()
-            .ratio(self.experience.exp_ratio())
+            .ratio(player_experience.exp_ratio())
             .render(exp_layout[1], buf);
 
         Paragraph::new("]").render(exp_layout[2], buf);
 
-        Paragraph::new(format!("lvl {}", self.experience.level)).render(exp_layout[4], buf);
+        Paragraph::new(format!("lvl {}", player_experience.level)).render(exp_layout[4], buf);
     }
 }

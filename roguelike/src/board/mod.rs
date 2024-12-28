@@ -1,9 +1,10 @@
-use crate::components::Position;
 use generator::generate_map;
 use mapgen::MapBuffer;
 
-use specs::{DispatcherBuilder, World, WorldExt};
+use specs::{DispatcherBuilder, World};
 use tile::Tile;
+
+use crate::flow::{GameFlow, GameState};
 
 use self::tile::Biome;
 
@@ -57,15 +58,27 @@ impl Default for WorldTileMap {
 const BOARD_HEIGHT: usize = 50;
 const BOARD_WIDTH: usize = 80;
 
-pub fn register(_: &mut DispatcherBuilder, world: &mut World) -> anyhow::Result<()> {
-    world.register::<Position>();
+struct MapGenerationSystem;
 
-    let map = generate_map();
+impl<'a> specs::System<'a> for MapGenerationSystem {
+    type SystemData = (specs::Read<'a, GameFlow>, specs::Write<'a, WorldTileMap>);
 
-    let mut world_tile_map = WorldTileMap::new_empty(BOARD_WIDTH, BOARD_HEIGHT);
-    world_tile_map.set_biome(tile::Biome::Castle);
-    world_tile_map.set_map(&map);
+    fn run(&mut self, (game_flow, mut tile_map): Self::SystemData) {
+        let GameState::Started = game_flow.state else {
+            return;
+        };
+
+        let map: mapgen::MapBuffer = generate_map();
+        tile_map.set_map(&map);
+        tile_map.set_biome(tile::Biome::Castle);
+    }
+}
+
+pub fn register(dispatcher: &mut DispatcherBuilder, world: &mut World) -> anyhow::Result<()> {
+    let world_tile_map = WorldTileMap::new_empty(BOARD_WIDTH, BOARD_HEIGHT);
     world.insert(world_tile_map);
+
+    dispatcher.add(MapGenerationSystem, "map_generation_system", &[]);
 
     Ok(())
 }

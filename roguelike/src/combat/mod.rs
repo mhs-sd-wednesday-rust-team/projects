@@ -9,18 +9,20 @@ use specs::{
 };
 
 use crate::{
-    components::Position,
     experience::{GainExperience, KillExperience},
     flow::{GameFlow, GameState},
     monster::Monster,
+    movement::Position,
     player::Player,
     turn::Turn,
 };
 
 pub mod view;
 
-#[derive(Component)]
-#[allow(dead_code)]
+#[derive(Component, Clone)]
+pub struct Attacked;
+
+#[derive(Component, Clone)]
 pub struct CombatStats {
     pub max_hp: i64,
     pub hp: i64,
@@ -57,7 +59,6 @@ pub enum CombatState {
 }
 
 impl CombatStats {
-    #[allow(dead_code)]
     pub fn hp_ratio(&self) -> f64 {
         self.hp as f64 / self.max_hp as f64
     }
@@ -73,20 +74,35 @@ impl<'a> specs::System<'a> for CombatSystem {
         specs::WriteStorage<'a, Player>,
         specs::WriteStorage<'a, Monster>,
         specs::WriteStorage<'a, CombatStats>,
+        specs::WriteStorage<'a, Attacked>,
         specs::ReadStorage<'a, Position>,
-        specs::Write<'a, GameFlow>,
+        specs::Read<'a, GameFlow>,
     );
 
     fn run(
         &mut self,
-        (entities, mut combat_state, turn, player, monsters, mut stats, positions, mut game_state): Self::SystemData,
+        (
+            entities,
+            mut combat_state,
+            turn,
+            player,
+            monsters,
+            mut stats,
+            mut attacked,
+            positions,
+            game_state,
+        ): Self::SystemData,
     ) {
-        let (GameState::Running | GameState::Combat) = game_state.state else {
+        let GameState::Running = game_state.state else {
             return;
         };
 
         match combat_state.deref_mut() {
             CombatState::NoCombat => {
+                for (e, _) in (&entities, &player).join() {
+                    attacked.remove(e);
+                }
+
                 let (_, player_pos, player_entity) = (&player, &positions, &entities)
                     .join()
                     .next()
@@ -113,7 +129,6 @@ impl<'a> specs::System<'a> for CombatSystem {
                         started: Instant::now(),
                         state: CombatFlowState::Tossing,
                     });
-                    game_state.state = GameState::Combat;
                 }
             }
             CombatState::Combat(CombatFlow {
@@ -155,11 +170,11 @@ impl<'a> specs::System<'a> for CombatSystem {
                 }
                 CombatFlowState::HpDiff { defending_diff } => {
                     let defending_stats = stats.get_mut(*defending).unwrap();
+                    attacked.insert(*attacker, Attacked).unwrap();
 
                     defending_stats.hp += *defending_diff;
 
                     *combat_state = CombatState::NoCombat;
-                    game_state.state = GameState::Running;
                 }
             },
             _ => {}
@@ -177,35 +192,28 @@ impl<'a> specs::System<'a> for DeathSystem {
         specs::ReadStorage<'a, CombatStats>,
         specs::ReadStorage<'a, KillExperience>,
         specs::WriteStorage<'a, GainExperience>,
-        specs::Write<'a, GameFlow>,
+        specs::Read<'a, GameFlow>,
     );
 
     fn run(
         &mut self,
-        (entities, player, monsters, stats, kill_experience, mut gain_experience, mut game_flow): Self::SystemData,
+        (entities, player, monsters, stats, kill_experience, mut gain_experience, game_flow): Self::SystemData,
     ) {
-        let (GameState::Running | GameState::Combat) = game_flow.state else {
+        let GameState::Running = game_flow.state else {
             return;
         };
-
-        for (player_stats, _) in (&stats, &player).join() {
-            if player_stats.hp <= 0 {
-                game_flow.state = GameState::Finished;
-                return;
-            }
-        }
 
         let (player_entity, _) = (&entities, &player).join().next().unwrap();
 
         gain_experience
             .insert(player_entity, GainExperience::new(0))
             .unwrap();
-        for (entity, entity_stats, kill_exp, _) in
-            (&entities, &stats, &kill_experience, &monsters).join()
-        {
+        for (entity, entity_stats, _) in (&entities, &stats, &monsters).join() {
             if entity_stats.hp <= 0 {
-                let gain = gain_experience.get_mut(player_entity).unwrap();
-                gain.exp_count += GainExperience::from(kill_exp.clone()).exp_count;
+                if let Some(kill_exp) = kill_experience.get(entity) {
+                    let gain = gain_experience.get_mut(player_entity).unwrap();
+                    gain.exp_count += GainExperience::from(kill_exp.clone()).exp_count;
+                }
 
                 entities
                     .delete(entity)
@@ -219,6 +227,7 @@ pub fn register(dispatcher: &mut DispatcherBuilder, world: &mut World) -> anyhow
     world.insert(CombatState::default());
 
     world.register::<CombatStats>();
+    world.register::<Attacked>();
 
     dispatcher.add(
         CombatSystem,
