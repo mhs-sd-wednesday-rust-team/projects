@@ -1,7 +1,6 @@
 #![allow(clippy::needless_lifetimes)]
-use flow::{GameFlow, GameState};
 use specs::{DispatcherBuilder, World, WorldExt};
-use std::io::Result;
+use term::terminal::CrosstermApp;
 
 mod board;
 mod combat;
@@ -12,33 +11,28 @@ mod items;
 mod monster;
 mod movement;
 mod player;
-mod render;
 mod term;
 mod turn;
 
-fn main() -> Result<()> {
+fn main() -> anyhow::Result<()> {
     let mut world = World::new();
     let mut dispatcher_builder = DispatcherBuilder::new();
 
-    term::register(&mut dispatcher_builder, &mut world).unwrap();
-    board::register(&mut dispatcher_builder, &mut world).unwrap();
-    items::register(&mut dispatcher_builder, &mut world).unwrap();
-    movement::register(&mut dispatcher_builder, &mut world).unwrap();
-    player::register(&mut dispatcher_builder, &mut world).unwrap();
-    monster::register(&mut dispatcher_builder, &mut world).unwrap();
-    combat::register(&mut dispatcher_builder, &mut world).unwrap();
-    experience::register(&mut dispatcher_builder, &mut world).unwrap();
-    turn::register(&mut dispatcher_builder, &mut world).unwrap();
-    flow::register(&mut dispatcher_builder, &mut world).unwrap();
-    render::register(&mut dispatcher_builder, &mut world).unwrap();
+    term::register(&mut dispatcher_builder, &mut world)?;
+    board::register(&mut dispatcher_builder, &mut world)?;
+    items::register(&mut dispatcher_builder, &mut world)?;
+    movement::register(&mut dispatcher_builder, &mut world)?;
+    player::register(&mut dispatcher_builder, &mut world)?;
+    monster::register(&mut dispatcher_builder, &mut world)?;
+    combat::register(&mut dispatcher_builder, &mut world)?;
+    experience::register(&mut dispatcher_builder, &mut world)?;
+    turn::register(&mut dispatcher_builder, &mut world)?;
+    flow::register(&mut dispatcher_builder, &mut world)?;
 
-    let mut dispatcher = dispatcher_builder.build();
+    let dispatcher = dispatcher_builder.build();
 
-    while world.read_resource::<GameFlow>().state != GameState::Exit {
-        dispatcher.dispatch(&world);
-        world.maintain();
-        // some sleep?
-    }
+    let app = CrosstermApp::new(world, dispatcher);
+    app.run()?;
 
     Ok(())
 }

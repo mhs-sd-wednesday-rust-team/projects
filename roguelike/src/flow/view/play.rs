@@ -2,19 +2,15 @@ use ratatui::{
     layout::{Constraint, Direction, Flex, Layout},
     widgets::{Block, Paragraph, Widget},
 };
+use specs::{World, WorldExt};
 
 use crate::{
-    board::view::board::BoardView,
-    combat::{view::bar::CombatBarView, CombatStats},
-    experience::{view::bar::ExperienceBarView, Experience},
-    flow::Level,
+    board::view::board::BoardView, combat::view::bar::CombatBarView,
+    experience::view::bar::ExperienceBarView, flow::GameFlow,
 };
 
 pub struct PlayView<'a> {
-    pub level: &'a Level,
-    pub player_experience: &'a Experience,
-    pub player_stats: &'a CombatStats,
-    pub board: BoardView<'a>,
+    pub world: &'a World,
 }
 
 impl<'a> Widget for PlayView<'a> {
@@ -22,9 +18,11 @@ impl<'a> Widget for PlayView<'a> {
     where
         Self: Sized,
     {
+        let game_flow = self.world.read_resource::<GameFlow>();
+
         Block::bordered()
             .border_type(ratatui::widgets::BorderType::Thick)
-            .title_bottom(format!("level: {}", self.level.as_number()))
+            .title_bottom(format!("level: {}", game_flow.level.as_number()))
             .render(area, buf);
 
         let center_area = area.inner(ratatui::layout::Margin {
@@ -42,7 +40,7 @@ impl<'a> Widget for PlayView<'a> {
             .flex(Flex::Center)
             .split(center_area);
 
-        self.board.render(layout[0], buf);
+        BoardView::new(self.world).render(layout[0], buf);
 
         let hud_layout = Layout::default()
             .direction(Direction::Horizontal)
@@ -55,15 +53,8 @@ impl<'a> Widget for PlayView<'a> {
             ])
             .split(layout[1]);
 
-        ExperienceBarView {
-            experience: self.player_experience,
-        }
-        .render(hud_layout[0], buf);
-
-        CombatBarView {
-            stats: self.player_stats,
-        }
-        .render(hud_layout[2], buf);
+        ExperienceBarView { world: self.world }.render(hud_layout[0], buf);
+        CombatBarView { world: self.world }.render(hud_layout[2], buf);
 
         let hint_layout = Layout::default()
             .direction(Direction::Horizontal)

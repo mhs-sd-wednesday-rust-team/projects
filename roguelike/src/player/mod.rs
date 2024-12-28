@@ -1,4 +1,3 @@
-use crossterm::event::{Event, KeyCode, KeyEventKind};
 use specs::prelude::*;
 use specs::{Component, DenseVecStorage, DispatcherBuilder, World, WorldExt};
 
@@ -7,7 +6,7 @@ use crate::combat::{CombatState, CombatStats};
 use crate::experience::Experience;
 use crate::flow::{GameFlow, GameState};
 use crate::movement::{find_free_position, MoveAction, Position};
-use crate::term::TermEvents;
+use crate::term::{Command, TermCommands};
 
 pub mod view;
 
@@ -77,7 +76,7 @@ impl<'a> specs::System<'a> for PlayerControlSystem {
         specs::Entities<'a>,
         specs::WriteStorage<'a, MoveAction>,
         specs::WriteStorage<'a, Player>,
-        specs::Read<'a, TermEvents>,
+        specs::Read<'a, TermCommands>,
         specs::Read<'a, CombatState>,
         specs::Read<'a, GameFlow>,
     );
@@ -94,20 +93,16 @@ impl<'a> specs::System<'a> for PlayerControlSystem {
         };
 
         for event in term_events.0.iter() {
-            if let Event::Key(k) = event {
-                if k.kind == KeyEventKind::Press {
-                    let (delta_x, delta_y) = match k.code {
-                        KeyCode::Up | KeyCode::Char('k') => (0, -1),
-                        KeyCode::Down | KeyCode::Char('j') => (0, 1),
-                        KeyCode::Left | KeyCode::Char('h') => (-1, 0),
-                        KeyCode::Right | KeyCode::Char('l') => (1, 0),
-                        _ => continue,
-                    };
+            let (delta_x, delta_y) = match event {
+                Command::Up => (0, -1),
+                Command::Down => (0, 1),
+                Command::Left => (-1, 0),
+                Command::Right => (1, 0),
+                _ => continue,
+            };
 
-                    for (_, e) in (&players, &entities).join() {
-                        moves.insert(e, MoveAction::new(delta_x, delta_y)).unwrap();
-                    }
-                }
+            for (_, e) in (&players, &entities).join() {
+                moves.insert(e, MoveAction::new(delta_x, delta_y)).unwrap();
             }
         }
     }

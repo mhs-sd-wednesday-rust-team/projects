@@ -1,9 +1,8 @@
-use crossterm::event::{Event, KeyCode, KeyEventKind};
 use specs::{DispatcherBuilder, Join, World};
 
 use crate::combat::CombatStats;
 use crate::player::Player;
-use crate::term::TermEvents;
+use crate::term::{Command, TermCommands};
 
 pub mod view;
 
@@ -48,7 +47,7 @@ struct GameFlowSystem;
 
 impl<'a> specs::System<'a> for GameFlowSystem {
     type SystemData = (
-        specs::Read<'a, TermEvents>,
+        specs::Read<'a, TermCommands>,
         specs::ReadStorage<'a, Player>,
         specs::ReadStorage<'a, CombatStats>,
         specs::Write<'a, GameFlow>,
@@ -58,26 +57,18 @@ impl<'a> specs::System<'a> for GameFlowSystem {
         match game_flow.state {
             GameState::Start => {
                 for event in term_events.0.iter() {
-                    if let Event::Key(k) = event {
-                        if k.kind == KeyEventKind::Press {
-                            if let KeyCode::Char('q') = k.code {
-                                game_flow.state = GameState::Exit;
-                            } else {
-                                game_flow.state = GameState::Started;
-                            }
-                        }
+                    if let Command::Quit = event {
+                        game_flow.state = GameState::Exit;
+                    } else {
+                        game_flow.state = GameState::Started;
                     }
                 }
             }
             GameState::Started => {
                 game_flow.state = GameState::Running;
                 for event in term_events.0.iter() {
-                    if let Event::Key(k) = event {
-                        if k.kind == KeyEventKind::Press {
-                            if let KeyCode::Char('q') = k.code {
-                                game_flow.state = GameState::Exit;
-                            }
-                        }
+                    if let Command::Death = event {
+                        game_flow.state = GameState::Finished;
                     }
                 }
             }
@@ -89,29 +80,21 @@ impl<'a> specs::System<'a> for GameFlowSystem {
                     }
                 }
                 for event in term_events.0.iter() {
-                    if let Event::Key(k) = event {
-                        if k.kind == KeyEventKind::Press {
-                            if let KeyCode::Char('d') = k.code {
-                                game_flow.state = GameState::Finished;
-                            }
-                        }
+                    if let Command::Death = event {
+                        game_flow.state = GameState::Finished;
                     }
                 }
             }
             GameState::Finished => {
                 for event in term_events.0.iter() {
-                    if let Event::Key(k) = event {
-                        if k.kind == KeyEventKind::Press {
-                            match k.code {
-                                KeyCode::Enter => {
-                                    game_flow.state = GameState::Started;
-                                }
-                                KeyCode::Char('q') => {
-                                    game_flow.state = GameState::Exit;
-                                }
-                                _ => {}
-                            };
+                    match event {
+                        Command::Confirm => {
+                            game_flow.state = GameState::Started;
                         }
+                        Command::Quit => {
+                            game_flow.state = GameState::Exit;
+                        }
+                        _ => {}
                     }
                 }
             }
